@@ -125,8 +125,8 @@ export default function DashboardPage() {
           loading={isLoading}
         />
         <StatCard
-          title="Today's Revenue"
-          value={stats?.today_revenue ?? 0}
+          title="Total Revenue"
+          value={stats?.total_revenue ?? 0}
           icon={<DollarSign className="h-4 w-4" />}
           loading={isLoading}
           format={(v) =>
