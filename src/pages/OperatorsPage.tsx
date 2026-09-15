@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Search, MoreVertical, Trash2 } from "lucide-react";
+import { Plus, Search, MoreVertical, Power, PowerOff } from "lucide-react";
 import {
   PageHeader,
   Button,
@@ -20,7 +20,7 @@ import { useOperators, useCreateOperator, useUpdateOperator, useDeactivateOperat
 import { toast } from "sonner";
 
 export default function OperatorsPage() {
-  const { data: operators, isLoading, error } = useOperators();
+  const { data: operators, isLoading, error, refetch } = useOperators();
   const createOp = useCreateOperator();
   const updateOp = useUpdateOperator();
   const deactivateOp = useDeactivateOperator();
@@ -29,6 +29,7 @@ export default function OperatorsPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<{ id: string; name: string } | null>(null);
   const [name, setName] = useState("");
+  const [nameError, setNameError] = useState("");
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -39,29 +40,53 @@ export default function OperatorsPage() {
   const openCreate = () => {
     setEditing(null);
     setName("");
+    setNameError("");
     setDialogOpen(true);
   };
 
   const openEdit = (op: { id: string; name: string }) => {
     setEditing(op);
     setName(op.name);
+    setNameError("");
     setDialogOpen(true);
   };
 
+  const validateName = (value: string): boolean => {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      setNameError("Operator name is required.");
+      return false;
+    }
+    if (trimmed.length < 2) {
+      setNameError("Name must be at least 2 characters.");
+      return false;
+    }
+    setNameError("");
+    return true;
+  };
+
+  const handleNameChange = (value: string) => {
+    setName(value);
+    if (nameError) {
+      validateName(value);
+    }
+  };
+
   const doSave = async () => {
-    if (!name.trim()) return;
+    if (!validateName(name)) return;
     setSubmitting(true);
     try {
       if (editing) {
-        await updateOp.mutateAsync({ id: editing.id, body: { name } });
+        await updateOp.mutateAsync({ id: editing.id, body: { name: name.trim() } });
         toast.success("Operator updated");
       } else {
-        await createOp.mutateAsync({ name });
+        await createOp.mutateAsync({ name: name.trim() });
         toast.success("Operator created");
       }
       setDialogOpen(false);
       setName("");
       setEditing(null);
+      setNameError("");
     } catch {
       toast.error("Failed to save operator");
     } finally {
@@ -79,6 +104,18 @@ export default function OperatorsPage() {
       toast.error("Failed to deactivate operator");
     }
   };
+
+  const handleActivate = async (operatorId: string) => {
+    try {
+      await updateOp.mutateAsync({ id: operatorId, body: { active: "active" } });
+      toast.success("Operator activated");
+    } catch {
+      toast.error("Failed to activate operator");
+    }
+  };
+
+  const isNameValid = name.trim().length > 0;
+  const canSubmit = isNameValid && !submitting;
 
   return (
     <div className="space-y-4">
@@ -116,6 +153,14 @@ export default function OperatorsPage() {
         {error && (
           <div className="p-4 text-sm text-red-600">
             Failed to load operators.
+            <Button
+              variant="ghost"
+              size="sm"
+              className="ml-2"
+              onClick={() => refetch()}
+            >
+              Retry
+            </Button>
           </div>
         )}
 
@@ -169,13 +214,21 @@ export default function OperatorsPage() {
                           <DropdownMenuItem onClick={() => openEdit(op)}>
                             Edit
                           </DropdownMenuItem>
-                          {op.active === "active" && (
+                          {op.active === "active" ? (
                             <DropdownMenuItem
                               className="text-red-600"
                               onClick={() => setDeleteId(op.id)}
                             >
-                              <Trash2 className="mr-2 h-4 w-4" />
+                              <PowerOff className="mr-2 h-4 w-4" />
                               Deactivate
+                            </DropdownMenuItem>
+                          ) : (
+                            <DropdownMenuItem
+                              className="text-emerald-600"
+                              onClick={() => handleActivate(op.id)}
+                            >
+                              <Power className="mr-2 h-4 w-4" />
+                              Activate
                             </DropdownMenuItem>
                           )}
                         </DropdownMenuContent>
@@ -208,6 +261,7 @@ export default function OperatorsPage() {
             setDialogOpen(false);
             setEditing(null);
             setName("");
+            setNameError("");
           }
         }}
         title={editing ? "Edit Operator" : "Add Operator"}
@@ -215,8 +269,25 @@ export default function OperatorsPage() {
         confirmLabel={editing ? "Save changes" : "Create operator"}
         variant="default"
         onConfirm={doSave}
-        loading={submitting}
-      />
+        loading={submitting || createOp.isPending || updateOp.isPending}
+      >
+        <div className="space-y-3">
+          <Input
+            value={name}
+            onChange={(e) => handleNameChange(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && canSubmit) {
+                doSave();
+              }
+            }}
+            placeholder="Operator name"
+            autoFocus
+          />
+          {nameError && (
+            <p className="text-xs text-red-600">{nameError}</p>
+          )}
+        </div>
+      </ConfirmDialog>
     </div>
   );
 }

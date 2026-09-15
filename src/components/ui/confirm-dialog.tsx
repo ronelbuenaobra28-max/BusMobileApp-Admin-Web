@@ -21,6 +21,7 @@ function ConfirmDialog({
   variant = "destructive",
   onConfirm,
   loading,
+  children,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -31,6 +32,7 @@ function ConfirmDialog({
   variant?: "default" | "destructive";
   onConfirm: () => void | Promise<void>;
   loading?: boolean;
+  children?: React.ReactNode;
 }) {
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
@@ -39,6 +41,9 @@ function ConfirmDialog({
           <AlertDialogTitle>{title}</AlertDialogTitle>
           {description && (
             <AlertDialogDescription>{description}</AlertDialogDescription>
+          )}
+          {children && (
+            <div className="text-left">{children}</div>
           )}
         </AlertDialogHeader>
         <AlertDialogFooter>
