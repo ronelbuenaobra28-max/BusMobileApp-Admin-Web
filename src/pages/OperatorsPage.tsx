@@ -33,6 +33,7 @@ export default function OperatorsPage() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [activateId, setActivateId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
 
   const filtered = operators?.filter((op) =>
     op.name.toLowerCase().includes(search.toLowerCase()),
@@ -50,6 +51,7 @@ export default function OperatorsPage() {
     setName(op.name);
     setNameError("");
     setDialogOpen(true);
+    setOpenMenuId(null);
   };
 
   const validateName = (value: string): boolean => {
@@ -206,23 +208,38 @@ export default function OperatorsPage() {
                       </span>
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <DropdownMenu>
+                      <DropdownMenu
+                        open={openMenuId === op.id}
+                        onOpenChange={(open) => setOpenMenuId(open ? op.id : null)}
+                      >
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" size="icon" className="h-8 w-8">
                             <MoreVertical className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => navigate(`/operators/${op.id}`)}>
+                          <DropdownMenuItem
+                            onClick={() => {
+                              navigate(`/operators/${op.id}`);
+                              setOpenMenuId(null);
+                            }}
+                          >
                             View details
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => openEdit(op)}>
+                          <DropdownMenuItem
+                            onClick={() => {
+                              openEdit(op);
+                            }}
+                          >
                             Edit
                           </DropdownMenuItem>
                           {op.active === "active" ? (
                             <DropdownMenuItem
                               className="text-red-600"
-                              onClick={() => setDeleteId(op.id)}
+                              onClick={() => {
+                                setDeleteId(op.id);
+                                setOpenMenuId(null);
+                              }}
                             >
                               <PowerOff className="mr-2 h-4 w-4" />
                               Deactivate
@@ -230,7 +247,10 @@ export default function OperatorsPage() {
                           ) : (
                             <DropdownMenuItem
                               className="text-emerald-600"
-                              onClick={() => setActivateId(op.id)}
+                              onClick={() => {
+                                setActivateId(op.id);
+                                setOpenMenuId(null);
+                              }}
                             >
                               <Power className="mr-2 h-4 w-4" />
                               Activate
