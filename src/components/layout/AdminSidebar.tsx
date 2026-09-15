@@ -36,7 +36,7 @@ export default function AdminSidebar() {
   };
 
   return (
-    <aside className="hidden w-64 flex-col border-r border-slate-200 bg-white md:flex">
+    <aside className="hidden h-screen w-64 flex-col overflow-y-auto border-r border-slate-200 bg-white md:flex">
       <div className="flex h-16 items-center border-b border-slate-200 px-6">
         <span className="text-lg font-semibold text-primary">BusMobileApp</span>
         <span className="ml-2 rounded-md bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
