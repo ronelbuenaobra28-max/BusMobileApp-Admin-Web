@@ -17,6 +17,8 @@ import type {
   AnalyticsOperators,
   AnalyticsFleet,
   RouteGeometry,
+  OperatorRoute,
+  OperatorStats,
 } from "@/types";
 
 export function useDashboardStats() {
@@ -462,5 +464,21 @@ export function useAnalyticsFleet() {
   return useQuery({
     queryKey: ["analytics", "fleet"],
     queryFn: () => api.get<AnalyticsFleet>("/api/admin/analytics/fleet"),
+  });
+}
+
+export function useOperatorRoutes(operatorId: string) {
+  return useQuery({
+    queryKey: ["admin", "operators", operatorId, "routes"],
+    queryFn: () => api.get<OperatorRoute[]>(`/api/admin/operators/${operatorId}/routes`),
+    enabled: !!operatorId,
+  });
+}
+
+export function useOperatorStats(operatorId: string) {
+  return useQuery({
+    queryKey: ["admin", "operators", operatorId, "stats"],
+    queryFn: () => api.get<OperatorStats>(`/api/admin/operators/${operatorId}/stats`),
+    enabled: !!operatorId,
   });
 }

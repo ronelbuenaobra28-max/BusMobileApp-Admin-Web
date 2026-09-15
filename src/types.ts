@@ -78,6 +78,10 @@ export interface Route {
   origin: string;
   destination: string;
   distance_km: number | null;
+  origin_lat: number | null;
+  origin_lng: number | null;
+  destination_lat: number | null;
+  destination_lng: number | null;
 }
 
 export interface GeocodingResult {
@@ -105,6 +109,24 @@ export interface RouteGeometry {
   distance_km: number | null;
   coordinates: [number, number][];
   stops: Stop[];
+}
+
+export interface OperatorRoute {
+  id: string;
+  name: string;
+  origin: string;
+  destination: string;
+  distance_km: number | null;
+  origin_lat: number | null;
+  origin_lng: number | null;
+  destination_lat: number | null;
+  destination_lng: number | null;
+  operator_name: string | null;
+}
+
+export interface OperatorStats {
+  bus_count: number;
+  route_count: number;
 }
 
 export interface Trip {

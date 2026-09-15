@@ -11,7 +11,8 @@ import DriversPage from "@/pages/DriversPage";
 import DriverDetailPage from "@/pages/DriverDetailPage";
 import RoutesPage from "@/pages/RoutesPage";
 import RouteDetailPage from "@/pages/RouteDetailPage";
-import RouteStopsPage from "@/pages/RouteStopsPage";
+import StopsPage from "@/pages/StopsPage";
+import RouteStopsManagePage from "@/pages/RouteStopsManagePage";
 import SchedulesPage from "@/pages/SchedulesPage";
 import ScheduleDetailPage from "@/pages/ScheduleDetailPage";
 import TripsPage from "@/pages/TripsPage";
@@ -65,7 +66,8 @@ function AdminRoutes() {
         <Route path="drivers/:id" element={<DriverDetailPage />} />
         <Route path="routes" element={<RoutesPage />} />
         <Route path="routes/:id" element={<RouteDetailPage />} />
-        <Route path="routes/:id/stops" element={<RouteStopsPage />} />
+        <Route path="stops" element={<StopsPage />} />
+        <Route path="stops/:operatorId/:routeId" element={<RouteStopsManagePage />} />
         <Route path="schedules" element={<SchedulesPage />} />
         <Route path="schedules/:id" element={<ScheduleDetailPage />} />
         <Route path="trips" element={<TripsPage />} />

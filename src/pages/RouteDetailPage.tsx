@@ -50,7 +50,7 @@ export default function RouteDetailPage() {
         }
         action={
           <div className="flex gap-2">
-            <Button variant="outline" onClick={() => navigate(`/routes/${id}/stops`)}>
+            <Button variant="outline" onClick={() => navigate("/stops")}>
               Manage Stops
             </Button>
             <Button variant="outline" onClick={() => navigate(-1)}>
