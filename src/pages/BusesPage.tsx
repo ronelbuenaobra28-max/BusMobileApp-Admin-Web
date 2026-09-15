@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Search, MoreVertical, Trash2 } from "lucide-react";
+import { Plus, Search, MoreVertical, PowerOff } from "lucide-react";
 import {
   PageHeader,
   Button,
@@ -13,14 +13,32 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
   DropdownMenuContent,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  Label,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
   ConfirmDialog,
   Skeleton,
 } from "@/components/ui";
 import { useBuses, useCreateBus, useUpdateBus, useRetireBus, useOperators } from "@/lib/api-hooks";
 import { toast } from "sonner";
 
+const BUS_STATUSES = [
+  { value: "active", label: "Active" },
+  { value: "maintenance", label: "Maintenance" },
+  { value: "retired", label: "Retired" },
+];
+
 export default function BusesPage() {
-  const { data: buses, isLoading, error } = useBuses();
+  const { data: buses, isLoading, error, refetch } = useBuses();
   const createBus = useCreateBus();
   const updateBus = useUpdateBus();
   const retireBus = useRetireBus();
@@ -32,14 +50,19 @@ export default function BusesPage() {
   const [form, setForm] = useState({ bus_number: "", capacity: "", status: "active", operator_id: "" });
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [errors, setErrors] = useState<{ bus_number?: string; capacity?: string; operator_id?: string }>({});
 
-  const filtered = buses?.filter((b) =>
-    b.bus_number.toLowerCase().includes(search.toLowerCase()),
-  );
+  const filtered = useMemo(() => {
+    if (!buses) return [];
+    const term = search.trim().toLowerCase();
+    if (!term) return buses;
+    return buses.filter((b) => b.bus_number.toLowerCase().includes(term));
+  }, [buses, search]);
 
   const openCreate = () => {
     setEditing(null);
     setForm({ bus_number: "", capacity: "", status: "active", operator_id: "" });
+    setErrors({});
     setDialogOpen(true);
   };
 
@@ -48,7 +71,7 @@ export default function BusesPage() {
     bus_number: string;
     capacity: number;
     status: string;
-    operator_id: string | null;
+    operator_id?: string | null;
   }) => {
     setEditing(b);
     setForm({
@@ -57,15 +80,28 @@ export default function BusesPage() {
       status: b.status,
       operator_id: b.operator_id ?? "",
     });
+    setErrors({});
     setDialogOpen(true);
   };
 
+  const validate = (): boolean => {
+    const next: typeof errors = {};
+    if (!form.bus_number.trim()) {
+      next.bus_number = "Bus number is required.";
+    }
+    if (!form.capacity || Number(form.capacity) <= 0) {
+      next.capacity = "Enter a valid capacity.";
+    }
+    setErrors(next);
+    return Object.keys(next).length === 0;
+  };
+
   const doSave = async () => {
-    if (!form.bus_number.trim() || !form.capacity) return;
+    if (!validate()) return;
     setSubmitting(true);
     try {
       const body = {
-        bus_number: form.bus_number,
+        bus_number: form.bus_number.trim(),
         capacity: Number(form.capacity),
         status: form.status,
         operator_id: form.operator_id || null,
@@ -91,11 +127,14 @@ export default function BusesPage() {
     try {
       await retireBus.mutateAsync(deleteId);
       toast.success("Bus retired");
-      setDeleteId(null);
     } catch {
       toast.error("Failed to retire bus");
+    } finally {
+      setDeleteId(null);
     }
   };
+
+  const selectedOperator = operators?.find((op) => op.id === form.operator_id);
 
   return (
     <div className="space-y-4">
@@ -131,10 +170,15 @@ export default function BusesPage() {
         )}
 
         {error && (
-          <div className="p-4 text-sm text-red-600">Failed to load buses.</div>
+          <div className="p-4 text-sm text-red-600">
+            Failed to load buses.
+            <Button variant="ghost" size="sm" className="ml-2" onClick={() => refetch()}>
+              Retry
+            </Button>
+          </div>
         )}
 
-        {!isLoading && !error && filtered && filtered.length === 0 && (
+        {!isLoading && !error && filtered.length === 0 && (
           <EmptyState
             title="No buses found"
             description="Add a bus to get started."
@@ -146,7 +190,7 @@ export default function BusesPage() {
           />
         )}
 
-        {!isLoading && !error && filtered && filtered.length > 0 && (
+        {!isLoading && !error && filtered.length > 0 && (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -162,20 +206,19 @@ export default function BusesPage() {
                 {filtered.map((b) => {
                   const op = operators?.find((o) => o.id === b.operator_id);
                   return (
-                    <tr
-                      key={b.id}
-                      className="border-b border-slate-100 hover:bg-slate-50/50"
-                    >
-                      <td className="px-4 py-3 font-medium text-slate-900">
-                        {b.bus_number}
-                      </td>
+                    <tr key={b.id} className="border-b border-slate-100 hover:bg-slate-50/50">
+                      <td className="px-4 py-3 font-medium text-slate-900">{b.bus_number}</td>
                       <td className="px-4 py-3 text-slate-900">{b.capacity}</td>
                       <td className="px-4 py-3">
-                        <span className={`inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-medium ${
-                          b.status === "active" ? "border-transparent bg-emerald-100 text-emerald-700" :
-                          b.status === "maintenance" ? "border-transparent bg-amber-100 text-amber-700" :
-                          "border-transparent bg-slate-100 text-slate-700"
-                        }`}>
+                        <span
+                          className={`inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-medium ${
+                            b.status === "active"
+                              ? "border-transparent bg-emerald-100 text-emerald-700"
+                              : b.status === "maintenance"
+                                ? "border-transparent bg-amber-100 text-amber-700"
+                                : "border-transparent bg-slate-100 text-slate-700"
+                          }`}
+                        >
                           {b.status}
                         </span>
                       </td>
@@ -199,7 +242,7 @@ export default function BusesPage() {
                                 className="text-red-600"
                                 onClick={() => setDeleteId(b.id)}
                               >
-                                <Trash2 className="mr-2 h-4 w-4" />
+                                <PowerOff className="mr-2 h-4 w-4" />
                                 Retire
                               </DropdownMenuItem>
                             )}
@@ -227,21 +270,85 @@ export default function BusesPage() {
         loading={retireBus.isPending}
       />
 
-      <ConfirmDialog
-        open={dialogOpen}
-        onOpenChange={(open: boolean) => {
-          if (!open) {
-            setDialogOpen(false);
-            setEditing(null);
-          }
-        }}
-        title={editing ? "Edit Bus" : "Add Bus"}
-        description={editing ? "Update bus details below." : "Enter bus details below."}
-        confirmLabel={editing ? "Save changes" : "Create bus"}
-        variant="default"
-        onConfirm={doSave}
-        loading={submitting}
-      />
+      <Dialog open={dialogOpen} onOpenChange={(open) => { if (!open) { setDialogOpen(false); setEditing(null); setErrors({}); } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editing ? "Edit Bus" : "Add Bus"}</DialogTitle>
+            <DialogDescription>{editing ? "Update bus details below." : "Enter bus details below."}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-1">
+              <Label htmlFor="bus_number">Bus Number</Label>
+              <Input
+                id="bus_number"
+                value={form.bus_number}
+                onChange={(e) => setForm((f) => ({ ...f, bus_number: e.target.value }))}
+                placeholder="e.g. HM-102"
+              />
+              {errors.bus_number && <p className="text-xs text-red-600">{errors.bus_number}</p>}
+            </div>
+
+            <div className="space-y-1">
+              <Label htmlFor="operator_id">Operator</Label>
+              <Select
+                value={form.operator_id}
+                onValueChange={(value) => setForm((f) => ({ ...f, operator_id: value === "__none" ? "" : value }))}
+              >
+                <SelectTrigger id="operator_id">
+                  <SelectValue placeholder={selectedOperator ? selectedOperator.name : "Select operator"} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none">None</SelectItem>
+                  {operators?.map((op) => (
+                    <SelectItem key={op.id} value={op.id}>
+                      {op.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1">
+              <Label htmlFor="capacity">Capacity</Label>
+              <Input
+                id="capacity"
+                type="number"
+                value={form.capacity}
+                onChange={(e) => setForm((f) => ({ ...f, capacity: e.target.value }))}
+                placeholder="e.g. 50"
+              />
+              {errors.capacity && <p className="text-xs text-red-600">{errors.capacity}</p>}
+            </div>
+
+            <div className="space-y-1">
+              <Label htmlFor="status">Status</Label>
+              <Select
+                value={form.status}
+                onValueChange={(value) => setForm((f) => ({ ...f, status: value }))}
+              >
+                <SelectTrigger id="status">
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
+                <SelectContent>
+                  {BUS_STATUSES.map((s) => (
+                    <SelectItem key={s.value} value={s.value}>
+                      {s.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={submitting}>
+              Cancel
+            </Button>
+            <Button onClick={doSave} disabled={submitting}>
+              {submitting ? "Saving..." : editing ? "Save changes" : "Create bus"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
