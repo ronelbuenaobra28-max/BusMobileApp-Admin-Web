@@ -31,6 +31,7 @@ export default function OperatorsPage() {
   const [name, setName] = useState("");
   const [nameError, setNameError] = useState("");
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [activateId, setActivateId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   const filtered = operators?.filter((op) =>
@@ -99,18 +100,22 @@ export default function OperatorsPage() {
     try {
       await deactivateOp.mutateAsync(deleteId);
       toast.success("Operator deactivated");
-      setDeleteId(null);
     } catch {
       toast.error("Failed to deactivate operator");
+    } finally {
+      setDeleteId(null);
     }
   };
 
-  const handleActivate = async (operatorId: string) => {
+  const handleActivate = async () => {
+    if (!activateId) return;
     try {
-      await updateOp.mutateAsync({ id: operatorId, body: { active: "active" } });
+      await updateOp.mutateAsync({ id: activateId, body: { active: "active" } });
       toast.success("Operator activated");
     } catch {
       toast.error("Failed to activate operator");
+    } finally {
+      setActivateId(null);
     }
   };
 
@@ -225,7 +230,7 @@ export default function OperatorsPage() {
                           ) : (
                             <DropdownMenuItem
                               className="text-emerald-600"
-                              onClick={() => handleActivate(op.id)}
+                              onClick={() => setActivateId(op.id)}
                             >
                               <Power className="mr-2 h-4 w-4" />
                               Activate
@@ -252,6 +257,18 @@ export default function OperatorsPage() {
         confirmLabel="Deactivate"
         onConfirm={handleDeactivate}
         loading={deactivateOp.isPending}
+      />
+
+      <ConfirmDialog
+        open={!!activateId}
+        onOpenChange={(open: boolean) => {
+          if (!open) setActivateId(null);
+        }}
+        title="Activate operator"
+        description="This operator will be marked as active. Are you sure?"
+        confirmLabel="Activate"
+        onConfirm={handleActivate}
+        loading={updateOp.isPending}
       />
 
       <ConfirmDialog
