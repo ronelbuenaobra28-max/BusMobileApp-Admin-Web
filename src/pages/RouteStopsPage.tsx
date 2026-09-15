@@ -301,7 +301,7 @@ export default function RouteStopsPage() {
                   <th className="px-4 py-3 font-medium">#</th>
                   <th className="px-4 py-3 font-medium">Name</th>
                   <th className="px-4 py-3 font-medium">Type</th>
-                  <th className="px-4 py-3 font-medium">Coordinates</th>
+                  <th className="px-4 py-3 font-medium">Distance from origin</th>
                   <th className="px-4 py-3 font-medium text-right">Actions</th>
                 </tr>
               </thead>
@@ -317,7 +317,9 @@ export default function RouteStopsPage() {
                     </td>
                     <td className="px-4 py-3">{pointTypeBadge(s.point_type)}</td>
                     <td className="px-4 py-3 text-slate-500">
-                      {s.latitude.toFixed(4)}, {s.longitude.toFixed(4)}
+                      {s.distance_from_origin_km !== null && s.distance_from_origin_km !== undefined
+                        ? `${s.distance_from_origin_km.toFixed(1)} km`
+                        : "—"}
                     </td>
                     <td className="px-4 py-3 text-right">
                       <div className="flex items-center justify-end gap-1">

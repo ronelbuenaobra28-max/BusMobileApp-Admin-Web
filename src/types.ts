@@ -77,6 +77,7 @@ export interface Route {
   name: string;
   origin: string;
   destination: string;
+  distance_km: number | null;
 }
 
 export interface Stop {
@@ -87,6 +88,14 @@ export interface Stop {
   longitude: number;
   sequence: number;
   point_type: "origin" | "checkpoint" | "passenger_stop" | "destination";
+  distance_from_origin_km: number | null;
+}
+
+export interface RouteGeometry {
+  route_id: string;
+  distance_km: number | null;
+  coordinates: [number, number][];
+  stops: Stop[];
 }
 
 export interface Trip {

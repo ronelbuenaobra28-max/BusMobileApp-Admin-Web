@@ -60,7 +60,7 @@ export default function RouteDetailPage() {
         }
       />
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <div className="p-6">
             <p className="text-sm text-slate-500">Origin</p>
@@ -71,6 +71,14 @@ export default function RouteDetailPage() {
           <div className="p-6">
             <p className="text-sm text-slate-500">Destination</p>
             <p className="text-lg font-semibold text-slate-900">{route.destination}</p>
+          </div>
+        </Card>
+        <Card>
+          <div className="p-6">
+            <p className="text-sm text-slate-500">Distance</p>
+            <p className="text-lg font-semibold text-slate-900">
+              {route.distance_km !== null && route.distance_km !== undefined ? `${route.distance_km.toFixed(1)} km` : "—"}
+            </p>
           </div>
         </Card>
         <Card>

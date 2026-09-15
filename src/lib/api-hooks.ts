@@ -16,6 +16,7 @@ import type {
   AnalyticsBookingStatus,
   AnalyticsOperators,
   AnalyticsFleet,
+  RouteGeometry,
 } from "@/types";
 
 export function useDashboardStats() {
@@ -217,6 +218,14 @@ export function useDeleteRoute() {
       qc.invalidateQueries({ queryKey: ["admin", "routes"] });
       qc.invalidateQueries({ queryKey: ["dashboard", "stats"] });
     },
+  });
+}
+
+export function useRouteGeometry(routeId: string) {
+  return useQuery({
+    queryKey: ["admin", "routes", routeId, "geometry"],
+    queryFn: () => api.get<RouteGeometry>(`/api/admin/routes/${routeId}/geometry`),
+    enabled: !!routeId,
   });
 }
 
