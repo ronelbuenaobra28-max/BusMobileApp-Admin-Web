@@ -4,7 +4,7 @@ import { useState, useMemo, type FormEvent, useEffect, useCallback, useRef } fro
 import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, ArrowUp, ArrowDown, Search } from "lucide-react";
 import { PageHeader, Button, Card, Skeleton, Input, ConfirmDialog } from "@/components/ui";
-import { useRoutes, useRouteStops, useAddStop, useUpdateStop, useDeleteStop } from "@/lib/api-hooks";
+import { useRoutes, useRouteStops, useAddStop, useUpdateStop, useDeleteStop, useRouteGeometry } from "@/lib/api-hooks";
 import { RouteMap } from "@/components/map/RouteMap";
 import { toast } from "sonner";
 import type { Stop, GeocodingResult } from "@/types";
@@ -15,6 +15,7 @@ export default function RouteStopsPage() {
   const navigate = useNavigate();
   const { data: routes } = useRoutes();
   const { data: stops, isLoading, refetch } = useRouteStops(id ?? "");
+  const { data: routeGeometry } = useRouteGeometry(id ?? "");
   const addStop = useAddStop();
   const updateStop = useUpdateStop();
   const deleteStop = useDeleteStop();
@@ -144,7 +145,7 @@ export default function RouteStopsPage() {
     [stops],
   );
 
-  const openAddStop = (lngLat: [number, number]) => {
+  const openAddStop = (lngLat?: [number, number]) => {
     setEditingStop(null);
     setSelectedLocation(null);
     clearLocationSearch();
@@ -152,10 +153,14 @@ export default function RouteStopsPage() {
       name: "",
       point_type: "passenger_stop",
       sequence: (stops?.length ?? 0) + 1,
-      latitude: lngLat[1],
-      longitude: lngLat[0],
+      latitude: lngLat?.[1] ?? 0,
+      longitude: lngLat?.[0] ?? 0,
     });
     setSubmitting(false);
+  };
+
+  const handleMapClick = (lngLat: [number, number]) => {
+    openAddStop(lngLat);
   };
 
   const openEditStop = (stop: Stop) => {
@@ -258,19 +263,26 @@ export default function RouteStopsPage() {
 
   return (
     <div className="space-y-4">
-      <PageHeader
-        title="Route Stops"
-        description={
-          route
-            ? `Manage stops for ${route.name}`
-            : "Manage route stops"
-        }
-        action={
-          <Button variant="outline" onClick={() => navigate(-1)}>
-            <ArrowLeft className="mr-2 h-4 w-4" /> Back
-          </Button>
-        }
-      />
+      <div className="flex items-center justify-between">
+        <PageHeader
+          title="Route Stops"
+          description={
+            route
+              ? `Manage stops for ${route.name}`
+              : "Manage route stops"
+          }
+          action={
+            <div className="flex items-center gap-2">
+              <Button onClick={() => openAddStop()}>
+                + Add Stop
+              </Button>
+              <Button variant="outline" onClick={() => navigate(-1)}>
+                <ArrowLeft className="mr-2 h-4 w-4" /> Back
+              </Button>
+            </div>
+          }
+        />
+      </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <div className="space-y-4">
@@ -283,7 +295,7 @@ export default function RouteStopsPage() {
             </div>
             <RouteMap
               stops={stops ?? []}
-              onAddStop={openAddStop}
+              onAddStop={handleMapClick}
               onEditStop={openEditStop}
               selectedLocation={
                 selectedLocation
@@ -291,6 +303,11 @@ export default function RouteStopsPage() {
                       latitude: selectedLocation.latitude,
                       longitude: selectedLocation.longitude,
                     }
+                  : null
+              }
+              routeGeometry={
+                routeGeometry
+                  ? { coordinates: routeGeometry.coordinates }
                   : null
               }
               readOnly={false}

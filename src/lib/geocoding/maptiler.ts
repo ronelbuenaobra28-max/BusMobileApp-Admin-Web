@@ -17,6 +17,25 @@ function getApiKey(): string {
   return key;
 }
 
+function buildPlaceName(feature: {
+  place_name?: string;
+  text?: string;
+  context?: Array<{ text?: string }>;
+}): string {
+  if (feature.place_name) {
+    return feature.place_name;
+  }
+  const parts = [feature.text];
+  if (feature.context) {
+    for (const item of feature.context) {
+      if (item.text) {
+        parts.push(item.text);
+      }
+    }
+  }
+  return parts.join(", ");
+}
+
 export async function searchLocations(
   query: string,
   options?: { limit?: number },
@@ -49,15 +68,15 @@ export async function searchLocations(
 
   const payload = (await response.json()) as {
     features?: Array<{
-      properties?: {
-        name?: string;
-        formatted_address?: string;
-        place_type?: string[];
-        mapbox_id?: string;
-      };
+      id?: string;
+      text?: string;
+      place_name?: string;
+      place_type?: string[];
+      relevance?: number;
       geometry?: {
         coordinates?: [number, number];
       };
+      context?: Array<{ text?: string }>;
     }>;
   };
 
@@ -65,19 +84,38 @@ export async function searchLocations(
     return [];
   }
 
-  return payload.features
-    .filter((feature) => Array.isArray(feature.geometry?.coordinates))
-    .map((feature) => {
-      const [longitude, latitude] = feature.geometry!.coordinates!;
-      return {
-        id: feature.properties?.mapbox_id ?? `${latitude}-${longitude}`,
-        name: feature.properties?.name ?? trimmed,
-        formattedAddress: feature.properties?.formatted_address ?? trimmed,
-        latitude,
-        longitude,
-        placeType: Array.isArray(feature.properties?.place_type)
-          ? feature.properties.place_type[0]
-          : feature.properties?.place_type ?? "place",
-      };
+  const seen = new Set<string>();
+  const results: GeocodingResult[] = [];
+
+  for (const feature of payload.features) {
+    if (!Array.isArray(feature.geometry?.coordinates)) {
+      continue;
+    }
+
+    const [longitude, latitude] = feature.geometry!.coordinates!;
+    const dedupKey = feature.id ?? `${latitude}-${longitude}`;
+    if (seen.has(dedupKey)) {
+      continue;
+    }
+    seen.add(dedupKey);
+
+    const name = feature.text ?? trimmed;
+    const formattedAddress = buildPlaceName(feature);
+    const placeType = Array.isArray(feature.place_type)
+      ? feature.place_type[0]
+      : feature.place_type ?? "place";
+
+    results.push({
+      id: feature.id ?? dedupKey,
+      name,
+      formattedAddress,
+      latitude,
+      longitude,
+      placeType,
     });
+  }
+
+  results.sort((a, b) => b.id.localeCompare(a.id));
+
+  return results;
 }

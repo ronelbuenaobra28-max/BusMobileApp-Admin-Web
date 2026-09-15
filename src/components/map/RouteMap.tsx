@@ -12,66 +12,95 @@ function RouteMap({
   onEditStop,
   readOnly = false,
   selectedLocation,
+  routeGeometry,
 }: {
   stops: Stop[];
   onAddStop?: (lngLat: [number, number]) => void;
   onEditStop?: (stop: Stop) => void;
   selectedLocation?: { latitude: number; longitude: number; name?: string } | null;
+  routeGeometry?: { coordinates: [number, number][] } | null;
   readOnly?: boolean;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
-  const markersRef = useRef<maplibregl.Marker[]>([]);
+  const selectedMarkerRef = useRef<maplibregl.Marker | null>(null);
+  const stopsRef = useRef(stops);
+  stopsRef.current = stops;
+  const routeGeometryRef = useRef(routeGeometry);
+  routeGeometryRef.current = routeGeometry;
   const selectedLocationRef = useRef(selectedLocation);
   selectedLocationRef.current = selectedLocation;
+  const onEditStopRef = useRef(onEditStop);
+  onEditStopRef.current = onEditStop;
+  const onAddStopRef = useRef(onAddStop);
+  onAddStopRef.current = onAddStop;
 
-  const features = useMemo(() => {
-    const pointFeatures = stops.map((stop) => ({
-      type: "Feature" as const,
-      properties: {
-        id: stop.id,
-        name: stop.name,
-        point_type: stop.point_type,
-        sequence: stop.sequence,
-      },
-      geometry: {
-        type: "Point" as const,
-        coordinates: [stop.longitude, stop.latitude] as [number, number],
-      },
-    }));
-    const lineFeature =
-      stops.length > 1
-        ? {
-            type: "Feature" as const,
-            properties: {},
-            geometry: {
-              type: "LineString" as const,
-              coordinates: stops
-                .slice()
-                .sort((a, b) => a.sequence - b.sequence)
-                .map((s) => [s.longitude, s.latitude] as [number, number]),
-            },
-          }
-        : null;
+  const stopFeatures = useMemo(() => {
     return {
       type: "FeatureCollection" as const,
-      features: [...pointFeatures, ...(lineFeature ? [lineFeature] : [])],
+      features: stops.map((stop) => ({
+        type: "Feature" as const,
+        properties: {
+          id: stop.id,
+          name: stop.name,
+          point_type: stop.point_type,
+          sequence: stop.sequence,
+        },
+        geometry: {
+          type: "Point" as const,
+          coordinates: [stop.longitude, stop.latitude] as [number, number],
+        },
+      })),
     };
   }, [stops]);
 
-  useEffect(() => {
-    if (!containerRef.current || mapRef.current) return;
+  const routeFeature = useMemo(() => {
+    if (!routeGeometry?.coordinates || routeGeometry.coordinates.length < 2) {
+      return null;
+    }
+    return {
+      type: "Feature" as const,
+      properties: {},
+      geometry: {
+        type: "LineString" as const,
+        coordinates: routeGeometry.coordinates,
+      },
+    };
+  }, [routeGeometry]);
 
-    const coords: [number, number][] = stops.map((s) => [s.longitude, s.latitude]);
-    const bounds = buildBoundingBox(coords, 0.05);
+  const selectedFeature = useMemo(() => {
+    if (!selectedLocation) return null;
+    return {
+      type: "Feature" as const,
+      properties: { name: selectedLocation.name ?? "Selected location" },
+      geometry: {
+        type: "Point" as const,
+        coordinates: [selectedLocation.longitude, selectedLocation.latitude] as [number, number],
+      },
+    };
+  }, [selectedLocation]);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container || mapRef.current) return;
+
+    const currentStops = stopsRef.current;
+    const currentRouteGeometry = routeGeometryRef.current;
+    const currentSelectedLocation = selectedLocationRef.current;
+
+    const allCoords: [number, number][] = [
+      ...currentStops.map((s) => [s.longitude, s.latitude] as [number, number]),
+      ...(currentRouteGeometry?.coordinates ?? []),
+      ...(currentSelectedLocation
+        ? [[currentSelectedLocation.longitude, currentSelectedLocation.latitude] as [number, number]]
+        : []),
+    ];
+    const bounds = buildBoundingBox(allCoords, 0.05);
 
     const map = new maplibregl.Map({
-      container: containerRef.current,
+      container,
       style: "https://tiles.openfreemap.org/styles/liberty",
-      center: [
-        (bounds[0][0] + bounds[1][0]) / 2,
-        (bounds[0][1] + bounds[1][1]) / 2,
-      ],
+      center: [(bounds[0][0] + bounds[1][0]) / 2, (bounds[0][1] + bounds[1][1]) / 2],
       zoom: 12,
     });
 
@@ -79,20 +108,59 @@ function RouteMap({
     mapRef.current = map;
 
     map.on("load", () => {
-      map.addSource("stops", {
+      map.addSource("route-line", {
         type: "geojson",
-        data: features,
+        data: currentRouteGeometry?.coordinates && currentRouteGeometry.coordinates.length >= 2
+          ? {
+              type: "Feature",
+              properties: {},
+              geometry: {
+                type: "LineString",
+                coordinates: currentRouteGeometry.coordinates,
+              },
+            }
+          : { type: "FeatureCollection", features: [] },
       });
 
-      const lineExists = features.features.some(
-        (f) => f.geometry.type === "LineString",
-      );
-      if (lineExists) {
+      map.addSource("saved-stops", {
+        type: "geojson",
+        data: {
+          type: "FeatureCollection",
+          features: currentStops.map((stop) => ({
+            type: "Feature",
+            properties: {
+              id: stop.id,
+              name: stop.name,
+              point_type: stop.point_type,
+              sequence: stop.sequence,
+            },
+            geometry: {
+              type: "Point",
+              coordinates: [stop.longitude, stop.latitude] as [number, number],
+            },
+          })),
+        },
+      });
+
+      map.addSource("selected-location", {
+        type: "geojson",
+        data: currentSelectedLocation
+          ? {
+              type: "Feature",
+              properties: { name: currentSelectedLocation.name ?? "Selected location" },
+              geometry: {
+                type: "Point",
+                coordinates: [currentSelectedLocation.longitude, currentSelectedLocation.latitude] as [number, number],
+              },
+            }
+          : { type: "FeatureCollection", features: [] },
+      });
+
+      if (currentRouteGeometry?.coordinates && currentRouteGeometry.coordinates.length >= 2) {
         map.addLayer({
-          id: "stops-line",
+          id: "route-line-layer",
           type: "line",
-          source: "stops",
-          filter: ["==", "$type", "LineString"],
+          source: "route-line",
           paint: {
             "line-color": "#2563eb",
             "line-width": 4,
@@ -102,10 +170,9 @@ function RouteMap({
       }
 
       map.addLayer({
-        id: "stops-points",
+        id: "saved-stops-points",
         type: "circle",
-        source: "stops",
-        filter: ["==", "$type", "Point"],
+        source: "saved-stops",
         paint: {
           "circle-radius": 8,
           "circle-color": [
@@ -125,10 +192,9 @@ function RouteMap({
       });
 
       map.addLayer({
-        id: "stops-labels",
+        id: "saved-stops-labels",
         type: "symbol",
-        source: "stops",
-        filter: ["==", "$type", "Point"],
+        source: "saved-stops",
         layout: {
           "text-field": ["get", "name"],
           "text-size": 11,
@@ -142,45 +208,42 @@ function RouteMap({
         },
       });
 
-      markersRef.current.forEach((m) => m.remove());
-      markersRef.current = [];
-      stops.forEach((stop) => {
-        const el = document.createElement("div");
-        el.className = "flex h-4 w-4 rounded-full border-2 border-white shadow";
-        el.style.backgroundColor =
-          stop.point_type === "origin"
-            ? "#16a34a"
-            : stop.point_type === "destination"
-              ? "#dc2626"
-              : stop.point_type === "checkpoint"
-                ? "#f59e0b"
-                : "#2563eb";
-        const marker = new maplibregl.Marker({ element: el })
-          .setLngLat([stop.longitude, stop.latitude])
-          .addTo(map);
-        marker.getElement().addEventListener("click", () => {
-          onEditStop?.(stop);
-        });
-        markersRef.current.push(marker);
+      map.addLayer({
+        id: "selected-location-point",
+        type: "circle",
+        source: "selected-location",
+        paint: {
+          "circle-radius": 10,
+          "circle-color": "#dc2626",
+          "circle-stroke-width": 3,
+          "circle-stroke-color": "#ffffff",
+        },
       });
 
-      if (selectedLocationRef.current) {
-        const selectedEl = document.createElement("div");
-        selectedEl.className = "flex h-5 w-5 rounded-full border-2 border-white shadow";
-        selectedEl.style.backgroundColor = "#dc2626";
-        const selectedMarker = new maplibregl.Marker({ element: selectedEl })
-          .setLngLat([
-            selectedLocationRef.current.longitude,
-            selectedLocationRef.current.latitude,
-          ])
-          .addTo(map);
-        markersRef.current.push(selectedMarker);
+      map.on("click", "saved-stops-points", (e) => {
+        const props = e.features?.[0]?.properties;
+        if (!props) return;
+        const stop = currentStops.find((s) => s.id === props.id);
+        if (stop) onEditStopRef.current?.(stop);
+      });
+
+      if (currentSelectedLocation) {
+        map.setCenter([currentSelectedLocation.longitude, currentSelectedLocation.latitude]);
+        map.setZoom(14);
+      } else if (currentStops.length > 0) {
+        const bounds = buildBoundingBox(
+          currentStops.map((s) => [s.longitude, s.latitude]),
+          0.05,
+        );
+        map.fitBounds(bounds, { padding: 40, maxZoom: 15 });
       }
     });
 
     return () => {
-      markersRef.current.forEach((m) => m.remove());
-      markersRef.current = [];
+      if (selectedMarkerRef.current) {
+        selectedMarkerRef.current.remove();
+        selectedMarkerRef.current = null;
+      }
       map.remove();
       mapRef.current = null;
     };
@@ -189,18 +252,22 @@ function RouteMap({
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
-    const source = map.getSource("stops") as maplibregl.GeoJSONSource | undefined;
-    if (source) {
-      source.setData(features);
+
+    const routeSource = map.getSource("route-line") as maplibregl.GeoJSONSource | undefined;
+    if (routeSource) {
+      routeSource.setData(routeFeature ?? { type: "FeatureCollection", features: [] });
     }
-    if (map.loaded() && stops.length > 0) {
-      const bounds = buildBoundingBox(
-        stops.map((s) => [s.longitude, s.latitude]),
-        0.05,
-      );
-      map.fitBounds(bounds, { padding: 40, maxZoom: 15 });
+
+    const stopsSource = map.getSource("saved-stops") as maplibregl.GeoJSONSource | undefined;
+    if (stopsSource) {
+      stopsSource.setData(stopFeatures);
     }
-  }, [features, stops]);
+
+    const selectedSource = map.getSource("selected-location") as maplibregl.GeoJSONSource | undefined;
+    if (selectedSource) {
+      selectedSource.setData(selectedFeature ?? { type: "FeatureCollection", features: [] });
+    }
+  }, [stopFeatures, routeFeature, selectedFeature]);
 
   useEffect(() => {
     const map = mapRef.current;
