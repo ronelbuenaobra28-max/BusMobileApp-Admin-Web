@@ -8,7 +8,45 @@ export interface DashboardStats {
   today_scheduled_trips: number;
   active_trips: number;
   today_bookings: number;
-  today_revenue: number;
+  total_revenue: number;
+}
+
+export interface AnalyticsReservations {
+  year: number;
+  months: { month: number; value: number }[];
+}
+
+export interface AnalyticsRevenue {
+  year: number;
+  months: { month: number; value: number }[];
+}
+
+export interface AnalyticsBookingStatusItem {
+  status: string;
+  count: number;
+}
+
+export interface AnalyticsBookingStatus {
+  items: AnalyticsBookingStatusItem[];
+}
+
+export interface AnalyticsOperatorItem {
+  id: string;
+  name: string;
+  reservations: number;
+  trips: number;
+}
+
+export interface AnalyticsOperators {
+  items: AnalyticsOperatorItem[];
+}
+
+export interface AnalyticsFleet {
+  total_buses: number;
+  active_buses: number;
+  maintenance_buses: number;
+  retired_buses: number;
+  active_trips: number;
 }
 
 export interface Operator {

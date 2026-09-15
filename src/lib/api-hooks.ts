@@ -11,6 +11,11 @@ import type {
   Terminal,
   AdminNotificationTestResponse,
   PointType,
+  AnalyticsReservations,
+  AnalyticsRevenue,
+  AnalyticsBookingStatus,
+  AnalyticsOperators,
+  AnalyticsFleet,
 } from "@/types";
 
 export function useDashboardStats() {
@@ -413,5 +418,40 @@ export function useAdminNotificationTest() {
   return useMutation({
     mutationFn: (body?: { title?: string; body?: string }) =>
       api.post<AdminNotificationTestResponse>("/api/admin/notifications/test", body ?? {}),
+  });
+}
+
+export function useAnalyticsReservations(year?: number) {
+  return useQuery({
+    queryKey: ["analytics", "reservations", year],
+    queryFn: () => api.get<AnalyticsReservations>(`/api/admin/analytics/reservations${year ? `?year=${year}` : ""}`),
+  });
+}
+
+export function useAnalyticsRevenue(year?: number) {
+  return useQuery({
+    queryKey: ["analytics", "revenue", year],
+    queryFn: () => api.get<AnalyticsRevenue>(`/api/admin/analytics/revenue${year ? `?year=${year}` : ""}`),
+  });
+}
+
+export function useAnalyticsBookingStatus() {
+  return useQuery({
+    queryKey: ["analytics", "booking-status"],
+    queryFn: () => api.get<AnalyticsBookingStatus>("/api/admin/analytics/booking-status"),
+  });
+}
+
+export function useAnalyticsOperators() {
+  return useQuery({
+    queryKey: ["analytics", "operators"],
+    queryFn: () => api.get<AnalyticsOperators>("/api/admin/analytics/operators"),
+  });
+}
+
+export function useAnalyticsFleet() {
+  return useQuery({
+    queryKey: ["analytics", "fleet"],
+    queryFn: () => api.get<AnalyticsFleet>("/api/admin/analytics/fleet"),
   });
 }
