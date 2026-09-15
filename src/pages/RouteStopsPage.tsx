@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useState, useMemo, type FormEvent } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, ArrowUp, ArrowDown } from "lucide-react";
 import { PageHeader, Button, Card, Skeleton, Input, ConfirmDialog } from "@/components/ui";
 import { useRoutes, useRouteStops, useAddStop, useUpdateStop, useDeleteStop } from "@/lib/api-hooks";
 import { RouteMap } from "@/components/map/RouteMap";
@@ -35,6 +35,10 @@ export default function RouteStopsPage() {
   const [submitting, setSubmitting] = useState(false);
 
   const route = routes?.find((r) => r.id === id);
+  const sortedStops = useMemo(
+    () => [...(stops ?? [])].sort((a, b) => a.sequence - b.sequence),
+    [stops],
+  );
 
   const openAddStop = (lngLat: [number, number]) => {
     setEditingStop(null);
@@ -94,6 +98,30 @@ export default function RouteStopsPage() {
       void refetch();
     } catch {
       toast.error("Failed to delete stop");
+    }
+  };
+
+  const moveStop = async (stop: Stop, direction: "up" | "down") => {
+    const currentIndex = sortedStops.findIndex((s) => s.id === stop.id);
+    if (currentIndex === -1) return;
+    const targetIndex = direction === "up" ? currentIndex - 1 : currentIndex + 1;
+    if (targetIndex < 0 || targetIndex >= sortedStops.length) return;
+    const targetStop = sortedStops[targetIndex];
+    try {
+      await updateStop.mutateAsync({
+        routeId: id!,
+        stopId: stop.id,
+        body: { sequence: targetStop.sequence },
+      });
+      await updateStop.mutateAsync({
+        routeId: id!,
+        stopId: targetStop.id,
+        body: { sequence: stop.sequence },
+      });
+      toast.success("Stop order updated");
+      void refetch();
+    } catch {
+      toast.error("Failed to reorder stops");
     }
   };
 
@@ -179,6 +207,22 @@ export default function RouteStopsPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-slate-700">
+                      Sequence
+                    </label>
+                    <Input
+                      type="number"
+                      min={1}
+                      value={stopForm.sequence}
+                      onChange={(e) =>
+                        setStopForm({
+                          ...stopForm,
+                          sequence: Number(e.target.value),
+                        })
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-slate-700">
                       Latitude
                     </label>
                     <Input
@@ -193,22 +237,22 @@ export default function RouteStopsPage() {
                       }
                     />
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-slate-700">
-                      Longitude
-                    </label>
-                    <Input
-                      type="number"
-                      step="any"
-                      value={stopForm.longitude}
-                      onChange={(e) =>
-                        setStopForm({
-                          ...stopForm,
-                          longitude: Number(e.target.value),
-                        })
-                      }
-                    />
-                  </div>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-slate-700">
+                    Longitude
+                  </label>
+                  <Input
+                    type="number"
+                    step="any"
+                    value={stopForm.longitude}
+                    onChange={(e) =>
+                      setStopForm({
+                        ...stopForm,
+                        longitude: Number(e.target.value),
+                      })
+                    }
+                  />
                 </div>
                 <div className="flex gap-2">
                   <Button type="submit" disabled={submitting}>
@@ -262,23 +306,39 @@ export default function RouteStopsPage() {
                 </tr>
               </thead>
               <tbody>
-                {stops
-                  .slice()
-                  .sort((a, b) => a.sequence - b.sequence)
-                  .map((s) => (
-                    <tr
-                      key={s.id}
-                      className="border-b border-slate-100 hover:bg-slate-50/50"
-                    >
-                      <td className="px-4 py-3 text-slate-500">{s.sequence}</td>
-                      <td className="px-4 py-3 font-medium text-slate-900">
-                        {s.name}
-                      </td>
-                      <td className="px-4 py-3">{pointTypeBadge(s.point_type)}</td>
-                      <td className="px-4 py-3 text-slate-500">
-                        {s.latitude.toFixed(4)}, {s.longitude.toFixed(4)}
-                      </td>
-                      <td className="px-4 py-3 text-right">
+                {sortedStops.map((s, idx) => (
+                  <tr
+                    key={s.id}
+                    className="border-b border-slate-100 hover:bg-slate-50/50"
+                  >
+                    <td className="px-4 py-3 text-slate-500">{s.sequence}</td>
+                    <td className="px-4 py-3 font-medium text-slate-900">
+                      {s.name}
+                    </td>
+                    <td className="px-4 py-3">{pointTypeBadge(s.point_type)}</td>
+                    <td className="px-4 py-3 text-slate-500">
+                      {s.latitude.toFixed(4)}, {s.longitude.toFixed(4)}
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          disabled={idx === 0}
+                          onClick={() => moveStop(s, "up")}
+                        >
+                          <ArrowUp className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          disabled={idx === sortedStops.length - 1}
+                          onClick={() => moveStop(s, "down")}
+                        >
+                          <ArrowDown className="h-4 w-4" />
+                        </Button>
                         <Button
                           variant="ghost"
                           size="sm"
@@ -294,9 +354,10 @@ export default function RouteStopsPage() {
                         >
                           Delete
                         </Button>
-                      </td>
-                    </tr>
-                  ))}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
