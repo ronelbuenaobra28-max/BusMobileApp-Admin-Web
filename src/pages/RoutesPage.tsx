@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Plus, Search, MoreVertical, Trash2 } from "lucide-react";
 import {
@@ -13,6 +13,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
   DropdownMenuContent,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  Label,
   ConfirmDialog,
   Skeleton,
 } from "@/components/ui";
@@ -20,7 +27,7 @@ import { useRoutes, useCreateRoute, useUpdateRoute, useDeleteRoute } from "@/lib
 import { toast } from "sonner";
 
 export default function RoutesPage() {
-  const { data: routes, isLoading, error } = useRoutes();
+  const { data: routes, isLoading, error, refetch } = useRoutes();
   const createRoute = useCreateRoute();
   const updateRoute = useUpdateRoute();
   const deleteRoute = useDeleteRoute();
@@ -31,38 +38,68 @@ export default function RoutesPage() {
   const [form, setForm] = useState({ name: "", origin: "", destination: "" });
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [errors, setErrors] = useState<{ name?: string; origin?: string; destination?: string }>({});
 
-  const filtered = routes?.filter((r) =>
-    r.name.toLowerCase().includes(search.toLowerCase()),
-  );
+  const filtered = useMemo(() => {
+    if (!routes) return [];
+    const term = search.trim().toLowerCase();
+    if (!term) return routes;
+    return routes.filter(
+      (r) =>
+        r.name.toLowerCase().includes(term) ||
+        r.origin.toLowerCase().includes(term) ||
+        r.destination.toLowerCase().includes(term),
+    );
+  }, [routes, search]);
 
   const openCreate = () => {
     setEditing(null);
     setForm({ name: "", origin: "", destination: "" });
+    setErrors({});
     setDialogOpen(true);
   };
 
   const openEdit = (r: { id: string; name: string; origin: string; destination: string }) => {
     setEditing(r);
     setForm({ name: r.name, origin: r.origin, destination: r.destination });
+    setErrors({});
     setDialogOpen(true);
   };
 
+  const validate = (): boolean => {
+    const next: typeof errors = {};
+    if (!form.name.trim()) {
+      next.name = "Route name is required.";
+    }
+    if (!form.origin.trim()) {
+      next.origin = "Origin is required.";
+    }
+    if (!form.destination.trim()) {
+      next.destination = "Destination is required.";
+    }
+    setErrors(next);
+    return Object.keys(next).length === 0;
+  };
+
   const doSave = async () => {
-    if (!form.name.trim() || !form.origin.trim() || !form.destination.trim()) return;
+    if (!validate()) return;
     setSubmitting(true);
     try {
       if (editing) {
         await updateRoute.mutateAsync({
           id: editing.id,
-          body: { name: form.name, origin: form.origin, destination: form.destination },
+          body: {
+            name: form.name.trim(),
+            origin: form.origin.trim(),
+            destination: form.destination.trim(),
+          },
         });
         toast.success("Route updated");
       } else {
         await createRoute.mutateAsync({
-          name: form.name,
-          origin: form.origin,
-          destination: form.destination,
+          name: form.name.trim(),
+          origin: form.origin.trim(),
+          destination: form.destination.trim(),
         });
         toast.success("Route created");
       }
@@ -80,9 +117,10 @@ export default function RoutesPage() {
     try {
       await deleteRoute.mutateAsync(deleteId);
       toast.success("Route deleted");
-      setDeleteId(null);
     } catch {
       toast.error("Failed to delete route");
+    } finally {
+      setDeleteId(null);
     }
   };
 
@@ -120,7 +158,12 @@ export default function RoutesPage() {
         )}
 
         {error && (
-          <div className="p-4 text-sm text-red-600">Failed to load routes.</div>
+          <div className="p-4 text-sm text-red-600">
+            Failed to load routes.
+            <Button variant="ghost" size="sm" className="ml-2" onClick={() => refetch()}>
+              Retry
+            </Button>
+          </div>
         )}
 
         {!isLoading && !error && filtered && filtered.length === 0 && (
@@ -199,21 +242,56 @@ export default function RoutesPage() {
         loading={deleteRoute.isPending}
       />
 
-      <ConfirmDialog
-        open={dialogOpen}
-        onOpenChange={(open: boolean) => {
-          if (!open) {
-            setDialogOpen(false);
-            setEditing(null);
-          }
-        }}
-        title={editing ? "Edit Route" : "Add Route"}
-        description={editing ? "Update route details below." : "Enter route details below."}
-        confirmLabel={editing ? "Save changes" : "Create route"}
-        variant="default"
-        onConfirm={doSave}
-        loading={submitting}
-      />
+      <Dialog open={dialogOpen} onOpenChange={(open) => { if (!open) { setDialogOpen(false); setEditing(null); setErrors({}); } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editing ? "Edit Route" : "Add Route"}</DialogTitle>
+            <DialogDescription>{editing ? "Update route details below." : "Enter route details below."}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-1">
+              <Label htmlFor="name">Route Name</Label>
+              <Input
+                id="name"
+                value={form.name}
+                onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                placeholder="e.g. Calamba - Alabang"
+              />
+              {errors.name && <p className="text-xs text-red-600">{errors.name}</p>}
+            </div>
+
+            <div className="space-y-1">
+              <Label htmlFor="origin">Origin</Label>
+              <Input
+                id="origin"
+                value={form.origin}
+                onChange={(e) => setForm((f) => ({ ...f, origin: e.target.value }))}
+                placeholder="e.g. Calamba"
+              />
+              {errors.origin && <p className="text-xs text-red-600">{errors.origin}</p>}
+            </div>
+
+            <div className="space-y-1">
+              <Label htmlFor="destination">Destination</Label>
+              <Input
+                id="destination"
+                value={form.destination}
+                onChange={(e) => setForm((f) => ({ ...f, destination: e.target.value }))}
+                placeholder="e.g. Alabang"
+              />
+              {errors.destination && <p className="text-xs text-red-600">{errors.destination}</p>}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={submitting}>
+              Cancel
+            </Button>
+            <Button onClick={doSave} disabled={submitting}>
+              {submitting ? "Saving..." : editing ? "Save changes" : "Create route"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
