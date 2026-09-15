@@ -11,16 +11,19 @@ function RouteMap({
   onAddStop,
   onEditStop,
   readOnly = false,
+  selectedLocation,
 }: {
   stops: Stop[];
   onAddStop?: (lngLat: [number, number]) => void;
   onEditStop?: (stop: Stop) => void;
-  selectedStopId?: string;
+  selectedLocation?: { latitude: number; longitude: number; name?: string } | null;
   readOnly?: boolean;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const markersRef = useRef<maplibregl.Marker[]>([]);
+  const selectedLocationRef = useRef(selectedLocation);
+  selectedLocationRef.current = selectedLocation;
 
   const features = useMemo(() => {
     const pointFeatures = stops.map((stop) => ({
@@ -160,6 +163,19 @@ function RouteMap({
         });
         markersRef.current.push(marker);
       });
+
+      if (selectedLocationRef.current) {
+        const selectedEl = document.createElement("div");
+        selectedEl.className = "flex h-5 w-5 rounded-full border-2 border-white shadow";
+        selectedEl.style.backgroundColor = "#dc2626";
+        const selectedMarker = new maplibregl.Marker({ element: selectedEl })
+          .setLngLat([
+            selectedLocationRef.current.longitude,
+            selectedLocationRef.current.latitude,
+          ])
+          .addTo(map);
+        markersRef.current.push(selectedMarker);
+      }
     });
 
     return () => {
@@ -185,6 +201,13 @@ function RouteMap({
       map.fitBounds(bounds, { padding: 40, maxZoom: 15 });
     }
   }, [features, stops]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !selectedLocation) return;
+    map.setCenter([selectedLocation.longitude, selectedLocation.latitude]);
+    map.setZoom(14);
+  }, [selectedLocation]);
 
   useEffect(() => {
     const map = mapRef.current;

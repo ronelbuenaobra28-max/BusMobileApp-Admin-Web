@@ -1,13 +1,14 @@
 "use client";
 
-import { useState, useMemo, type FormEvent } from "react";
+import { useState, useMemo, type FormEvent, useEffect, useCallback, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, ArrowUp, ArrowDown } from "lucide-react";
+import { ArrowLeft, ArrowUp, ArrowDown, Search } from "lucide-react";
 import { PageHeader, Button, Card, Skeleton, Input, ConfirmDialog } from "@/components/ui";
 import { useRoutes, useRouteStops, useAddStop, useUpdateStop, useDeleteStop } from "@/lib/api-hooks";
 import { RouteMap } from "@/components/map/RouteMap";
 import { toast } from "sonner";
-import type { Stop } from "@/types";
+import type { Stop, GeocodingResult } from "@/types";
+import { searchLocations } from "@/lib/geocoding/maptiler";
 
 export default function RouteStopsPage() {
   const { id } = useParams<{ id: string }>();
@@ -33,6 +34,109 @@ export default function RouteStopsPage() {
     longitude: 0,
   });
   const [submitting, setSubmitting] = useState(false);
+  const [locationQuery, setLocationQuery] = useState("");
+  const [locationResults, setLocationResults] = useState<GeocodingResult[]>([]);
+  const [locationLoading, setLocationLoading] = useState(false);
+  const [locationError, setLocationError] = useState<string | null>(null);
+  const [selectedLocation, setSelectedLocation] = useState<GeocodingResult | null>(null);
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  const clearLocationSearch = useCallback(() => {
+    setLocationQuery("");
+    setLocationResults([]);
+    setLocationLoading(false);
+    setLocationError(null);
+  }, []);
+
+  const handleLocationSearch = useCallback(
+    (query: string) => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+
+      const trimmed = query.trim();
+      if (trimmed.length < 2) {
+        setLocationResults([]);
+        setLocationLoading(false);
+        setLocationError(null);
+        return;
+      }
+
+      setLocationLoading(true);
+      setLocationError(null);
+
+      debounceTimerRef.current = setTimeout(async () => {
+        const controller = new AbortController();
+        abortControllerRef.current = controller;
+
+        try {
+          const results = await searchLocations(trimmed, { limit: 6 });
+          if (!controller.signal.aborted) {
+            setLocationResults(results);
+            setLocationLoading(false);
+          }
+        } catch (error) {
+          if (!controller.signal.aborted) {
+            setLocationLoading(false);
+            setLocationError(
+              error instanceof Error
+                ? error.message
+                : "Location search is temporarily unavailable.",
+            );
+            setLocationResults([]);
+          }
+        }
+      }, 400);
+    },
+    [],
+  );
+
+  const handleSelectLocation = useCallback(
+    (result: GeocodingResult) => {
+      setSelectedLocation(result);
+      setStopForm((prev) => ({
+        ...prev,
+        latitude: result.latitude,
+        longitude: result.longitude,
+      }));
+      setLocationQuery(result.formattedAddress);
+      setLocationResults([]);
+      setLocationLoading(false);
+      setLocationError(null);
+    },
+    [],
+  );
+
+  const handleManualCoordinateChange = useCallback(
+    (field: "latitude" | "longitude", value: number) => {
+      setStopForm((prev) => ({ ...prev, [field]: value }));
+      if (field === "latitude") {
+        setSelectedLocation((prev) =>
+          prev ? { ...prev, latitude: value } : null,
+        );
+      } else {
+        setSelectedLocation((prev) =>
+          prev ? { ...prev, longitude: value } : null,
+        );
+      }
+    },
+    [],
+  );
+
+  useEffect(() => {
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, []);
 
   const route = routes?.find((r) => r.id === id);
   const sortedStops = useMemo(
@@ -42,6 +146,8 @@ export default function RouteStopsPage() {
 
   const openAddStop = (lngLat: [number, number]) => {
     setEditingStop(null);
+    setSelectedLocation(null);
+    clearLocationSearch();
     setStopForm({
       name: "",
       point_type: "passenger_stop",
@@ -54,6 +160,18 @@ export default function RouteStopsPage() {
 
   const openEditStop = (stop: Stop) => {
     setEditingStop(stop);
+    setSelectedLocation({
+      id: stop.id,
+      name: stop.name,
+      formattedAddress: stop.name,
+      latitude: stop.latitude,
+      longitude: stop.longitude,
+      placeType: stop.point_type,
+    });
+    setLocationQuery(stop.name);
+    setLocationResults([]);
+    setLocationLoading(false);
+    setLocationError(null);
     setStopForm({
       name: stop.name,
       point_type: stop.point_type,
@@ -167,6 +285,14 @@ export default function RouteStopsPage() {
               stops={stops ?? []}
               onAddStop={openAddStop}
               onEditStop={openEditStop}
+              selectedLocation={
+                selectedLocation
+                  ? {
+                      latitude: selectedLocation.latitude,
+                      longitude: selectedLocation.longitude,
+                    }
+                  : null
+              }
               readOnly={false}
             />
           </Card>
@@ -179,6 +305,54 @@ export default function RouteStopsPage() {
             </h3>
             {editingStop ? (
               <form onSubmit={handleSubmit} className="mt-4 space-y-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-slate-700">Search location</label>
+                  <div className="relative">
+                    <Input
+                      value={locationQuery}
+                      onChange={(e) => {
+                        setLocationQuery(e.target.value);
+                        handleLocationSearch(e.target.value);
+                      }}
+                      placeholder="Search place or address"
+                      autoComplete="off"
+                    />
+                    <Search className="absolute right-2 top-2.5 h-4 w-4 text-slate-400" />
+                  </div>
+                  {locationLoading && (
+                    <p className="text-xs text-slate-500">Searching...</p>
+                  )}
+                  {locationError && (
+                    <p className="text-xs text-red-600">{locationError}</p>
+                  )}
+                  {!locationLoading && locationResults.length > 0 && (
+                    <div className="max-h-48 space-y-1 overflow-auto rounded-md border border-slate-200 bg-white">
+                      {locationResults.map((result) => (
+                        <button
+                          key={result.id}
+                          type="button"
+                          className="flex w-full flex-col items-start rounded-none border-0 bg-transparent px-3 py-2 text-left hover:bg-slate-50"
+                          onClick={() => handleSelectLocation(result)}
+                        >
+                          <span className="text-sm font-medium text-slate-900">
+                            {result.name}
+                          </span>
+                          <span className="text-xs text-slate-500">
+                            {result.formattedAddress}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {!locationLoading && locationQuery.trim().length >= 2 && locationResults.length === 0 && !locationError && (
+                    <p className="text-xs text-slate-500">No matching locations found.</p>
+                  )}
+                  {selectedLocation && (
+                    <p className="text-xs text-red-600">
+                      Selected: {selectedLocation.formattedAddress}
+                    </p>
+                  )}
+                </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-slate-700">Name</label>
                   <Input
@@ -221,7 +395,7 @@ export default function RouteStopsPage() {
                       }
                     />
                   </div>
-                  <div className="space-y-2">
+                   <div className="space-y-2">
                     <label className="text-sm font-medium text-slate-700">
                       Latitude
                     </label>
@@ -230,15 +404,12 @@ export default function RouteStopsPage() {
                       step="any"
                       value={stopForm.latitude}
                       onChange={(e) =>
-                        setStopForm({
-                          ...stopForm,
-                          latitude: Number(e.target.value),
-                        })
+                        handleManualCoordinateChange("latitude", Number(e.target.value))
                       }
                     />
                   </div>
                 </div>
-                <div className="space-y-2">
+                 <div className="space-y-2">
                   <label className="text-sm font-medium text-slate-700">
                     Longitude
                   </label>
@@ -247,10 +418,7 @@ export default function RouteStopsPage() {
                     step="any"
                     value={stopForm.longitude}
                     onChange={(e) =>
-                      setStopForm({
-                        ...stopForm,
-                        longitude: Number(e.target.value),
-                      })
+                      handleManualCoordinateChange("longitude", Number(e.target.value))
                     }
                   />
                 </div>

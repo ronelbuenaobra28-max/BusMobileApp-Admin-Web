@@ -80,6 +80,15 @@ export interface Route {
   distance_km: number | null;
 }
 
+export interface GeocodingResult {
+  id: string;
+  name: string;
+  formattedAddress: string;
+  latitude: number;
+  longitude: number;
+  placeType: string;
+}
+
 export interface Stop {
   id: string;
   route_id: string;
