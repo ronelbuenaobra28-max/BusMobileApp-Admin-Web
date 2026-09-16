@@ -107,6 +107,7 @@ export interface Stop {
 export interface RouteGeometry {
   route_id: string;
   distance_km: number | null;
+  /** GeoJSON coordinate pairs: [longitude, latitude] */
   coordinates: [number, number][];
   stops: Stop[];
 }
