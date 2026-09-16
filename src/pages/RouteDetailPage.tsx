@@ -3,14 +3,13 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { PageHeader, Button, Card, Skeleton } from "@/components/ui";
-import { useRoutes, useTrips, useRouteStops } from "@/lib/api-hooks";
+import { useRoutes, useTrips } from "@/lib/api-hooks";
 
 export default function RouteDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { data: routes, isLoading: loadingRoutes } = useRoutes();
   const { data: trips } = useTrips();
-  const { data: stops } = useRouteStops(id ?? "");
 
   const route = routes?.find((r) => r.id === id);
   const routeTrips = trips?.filter((t) => t.route_id === id) ?? [];
@@ -55,7 +54,7 @@ export default function RouteDetailPage() {
         }
       />
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
         <Card>
           <div className="p-6">
             <p className="text-sm text-slate-500">Origin</p>
@@ -76,53 +75,7 @@ export default function RouteDetailPage() {
             </p>
           </div>
         </Card>
-        <Card>
-          <div className="p-6">
-            <p className="text-sm text-slate-500">Stops</p>
-            <p className="text-2xl font-bold text-slate-900">{stops?.length ?? 0}</p>
-          </div>
-        </Card>
       </div>
-
-      <Card>
-        <div className="p-6">
-          <h3 className="mb-4 text-lg font-semibold text-slate-900">Stops</h3>
-          {!stops || stops.length === 0 ? (
-            <div className="rounded-lg border border-dashed border-slate-200 p-8 text-center text-sm text-slate-500">
-              No stops yet. Add stops to this route via the stop editor.
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-slate-100 text-left text-slate-500">
-                    <th className="px-3 py-2 font-medium">#</th>
-                    <th className="px-3 py-2 font-medium">Name</th>
-                    <th className="px-3 py-2 font-medium">Type</th>
-                    <th className="px-3 py-2 font-medium">Coords</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {stops.map((s) => (
-                    <tr key={s.id} className="border-b border-slate-100">
-                      <td className="px-3 py-2 text-slate-500">{s.sequence}</td>
-                      <td className="px-3 py-2 font-medium text-slate-900">{s.name}</td>
-                      <td className="px-3 py-2">
-                        <span className="inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-medium border-transparent bg-slate-100 text-slate-700">
-                          {s.point_type}
-                        </span>
-                      </td>
-                      <td className="px-3 py-2 text-slate-500">
-                        {s.latitude.toFixed(4)}, {s.longitude.toFixed(4)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      </Card>
 
       <Card>
         <div className="p-6">

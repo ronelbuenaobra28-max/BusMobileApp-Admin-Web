@@ -6,19 +6,14 @@ import type {
   Bus,
   Driver,
   Route,
-  Stop,
   Trip,
   Terminal,
   AdminNotificationTestResponse,
-  PointType,
   AnalyticsReservations,
   AnalyticsRevenue,
   AnalyticsBookingStatus,
   AnalyticsOperators,
   AnalyticsFleet,
-  RouteGeometry,
-  OperatorRoute,
-  OperatorStats,
 } from "@/types";
 
 export function useDashboardStats() {
@@ -223,94 +218,6 @@ export function useDeleteRoute() {
   });
 }
 
-export function useRouteGeometry(routeId: string) {
-  return useQuery({
-    queryKey: ["admin", "routes", routeId, "geometry"],
-    queryFn: () => api.get<RouteGeometry>(`/api/admin/routes/${routeId}/geometry`),
-    enabled: !!routeId,
-  });
-}
-
-export function useRouteStops(routeId: string) {
-  return useQuery({
-    queryKey: ["admin", "routes", routeId, "stops"],
-    queryFn: () => api.get<Stop[]>(`/api/admin/routes/${routeId}/stops`),
-    enabled: !!routeId,
-  });
-}
-
-export function useAddStop() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({
-      routeId,
-      body,
-    }: {
-      routeId: string;
-      body: {
-        name: string;
-        latitude: number;
-        longitude: number;
-        sequence: number;
-        point_type: PointType;
-      };
-    }) => api.post<Stop>(`/api/admin/routes/${routeId}/stops`, body),
-    onSuccess: (_, vars) => {
-      qc.invalidateQueries({
-        queryKey: ["admin", "routes", vars.routeId, "stops"],
-      });
-    },
-  });
-}
-
-export function useUpdateStop() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({
-      routeId,
-      stopId,
-      body,
-    }: {
-      routeId: string;
-      stopId: string;
-      body: Partial<{
-        name: string;
-        latitude: number;
-        longitude: number;
-        sequence: number;
-        point_type: PointType;
-      }>;
-    }) =>
-      api.put<Stop>(`/api/admin/routes/${routeId}/stops/${stopId}`, body),
-    onSuccess: (_, vars) => {
-      qc.invalidateQueries({
-        queryKey: ["admin", "routes", vars.routeId, "stops"],
-      });
-    },
-  });
-}
-
-export function useDeleteStop() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({
-      routeId,
-      stopId,
-    }: {
-      routeId: string;
-      stopId: string;
-    }) =>
-      api.del<{ success: boolean }>(
-        `/api/admin/routes/${routeId}/stops/${stopId}`,
-      ),
-    onSuccess: (_, vars) => {
-      qc.invalidateQueries({
-        queryKey: ["admin", "routes", vars.routeId, "stops"],
-      });
-    },
-  });
-}
-
 export function useTrips(filters?: {
   status?: string;
   date?: string;
@@ -464,33 +371,5 @@ export function useAnalyticsFleet() {
   return useQuery({
     queryKey: ["analytics", "fleet"],
     queryFn: () => api.get<AnalyticsFleet>("/api/admin/analytics/fleet"),
-  });
-}
-
-export function useOperatorRoutes(operatorId: string) {
-  return useQuery({
-    queryKey: ["admin", "operators", operatorId, "routes"],
-    queryFn: () => api.get<OperatorRoute[]>(`/api/admin/operators/${operatorId}/routes`),
-    enabled: !!operatorId,
-  });
-}
-
-export function useOperatorStats(operatorId: string) {
-  return useQuery({
-    queryKey: ["admin", "operators", operatorId, "stats"],
-    queryFn: () => api.get<OperatorStats>(`/api/admin/operators/${operatorId}/stats`),
-    enabled: !!operatorId,
-  });
-}
-
-export function useOperatorStatsBatch(operatorIds: string[]) {
-  return useQuery({
-    queryKey: ["admin", "operators", "stats-batch", operatorIds.sort().join(",")],
-    queryFn: () => {
-      const qs = new URLSearchParams();
-      qs.set("ids", operatorIds.join(","));
-      return api.get<Record<string, OperatorStats>>(`/api/admin/operators/batch-stats?${qs.toString()}`);
-    },
-    enabled: operatorIds.length > 0,
   });
 }
