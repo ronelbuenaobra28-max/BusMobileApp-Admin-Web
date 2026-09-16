@@ -100,6 +100,21 @@ function RouteMap({
     const map = new maplibregl.Map({
       container,
       style: "https://tiles.openfreemap.org/styles/liberty",
+      transformRequest: (url, resourceType) => {
+        if (
+          resourceType === "Tile" &&
+          url.includes("tiles.openfreemap.org/planet/") &&
+          !url.includes("/latest/")
+        ) {
+          return {
+            url: url.replace(
+              /tiles\.openfreemap\.org\/planet\/[^/]+\//,
+              "tiles.openfreemap.org/planet/latest/",
+            ),
+          };
+        }
+        return { url };
+      },
       center: [(bounds[0][0] + bounds[1][0]) / 2, (bounds[0][1] + bounds[1][1]) / 2],
       zoom: 12,
     });
