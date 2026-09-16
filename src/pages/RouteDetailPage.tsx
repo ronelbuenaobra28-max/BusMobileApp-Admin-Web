@@ -49,14 +49,9 @@ export default function RouteDetailPage() {
           </span>
         }
         action={
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={() => navigate("/stops")}>
-              Manage Stops
-            </Button>
-            <Button variant="outline" onClick={() => navigate(-1)}>
-              <ArrowLeft className="mr-2 h-4 w-4" /> Back
-            </Button>
-          </div>
+          <Button variant="outline" onClick={() => navigate(-1)}>
+            <ArrowLeft className="mr-2 h-4 w-4" /> Back
+          </Button>
         }
       />
 

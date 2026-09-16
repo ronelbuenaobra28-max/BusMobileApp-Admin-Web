@@ -50,7 +50,7 @@ function OperatorCard({ operator, onSelect }: { operator: Operator; onSelect: (o
 }
 
 function OperatorRoutesModal({ operator, onClose }: { operator: Operator; onClose: () => void }) {
-  const { data: routes, isLoading } = useOperatorRoutes(operator.id);
+  const { data: routes, isLoading, error } = useOperatorRoutes(operator.id);
   const navigate = useNavigate();
 
   return (
@@ -72,12 +72,17 @@ function OperatorRoutesModal({ operator, onClose }: { operator: Operator; onClos
               ))}
             </div>
           )}
-          {!isLoading && (!routes || routes.length === 0) && (
+          {error && (
+            <div className="rounded-lg border border-red-200 bg-red-50 p-6 text-center text-sm text-red-600">
+              Failed to load routes. Please try again.
+            </div>
+          )}
+          {!isLoading && !error && (!routes || routes.length === 0) && (
             <div className="rounded-lg border border-dashed border-slate-200 p-8 text-center text-sm text-slate-500">
               No routes found for this operator.
             </div>
           )}
-          {!isLoading && routes && routes.length > 0 && (
+          {!isLoading && !error && routes && routes.length > 0 && (
             <div className="space-y-3">
               {routes.map((route) => (
                 <Card key={route.id} className="p-4">
@@ -165,10 +170,12 @@ export default function StopsPage() {
         </div>
       )}
 
-      <OperatorRoutesModal
-        operator={selectedOperator!}
-        onClose={() => setSelectedOperator(null)}
-      />
+      {selectedOperator && (
+        <OperatorRoutesModal
+          operator={selectedOperator}
+          onClose={() => setSelectedOperator(null)}
+        />
+      )}
     </div>
   );
 }
