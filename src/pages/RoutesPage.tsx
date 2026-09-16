@@ -23,11 +23,12 @@ import {
   ConfirmDialog,
   Skeleton,
 } from "@/components/ui";
-import { useRoutes, useCreateRoute, useUpdateRoute, useDeleteRoute } from "@/lib/api-hooks";
+import { useRoutes, useCreateRoute, useUpdateRoute, useDeleteRoute, useOperators } from "@/lib/api-hooks";
 import { toast } from "sonner";
 
 export default function RoutesPage() {
   const { data: routes, isLoading, error, refetch } = useRoutes();
+  const { data: operators } = useOperators();
   const createRoute = useCreateRoute();
   const updateRoute = useUpdateRoute();
   const deleteRoute = useDeleteRoute();
@@ -36,6 +37,7 @@ export default function RoutesPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<{ id: string; name: string; origin: string; destination: string } | null>(null);
   const [form, setForm] = useState({ name: "", origin: "", destination: "" });
+  const [selectedOperatorIds, setSelectedOperatorIds] = useState<string[]>([]);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState<{ name?: string; origin?: string; destination?: string }>({});
@@ -55,13 +57,15 @@ export default function RoutesPage() {
   const openCreate = () => {
     setEditing(null);
     setForm({ name: "", origin: "", destination: "" });
+    setSelectedOperatorIds([]);
     setErrors({});
     setDialogOpen(true);
   };
 
-  const openEdit = (r: { id: string; name: string; origin: string; destination: string }) => {
+  const openEdit = (r: { id: string; name: string; origin: string; destination: string; operators: { operator_id: string }[] }) => {
     setEditing(r);
     setForm({ name: r.name, origin: r.origin, destination: r.destination });
+    setSelectedOperatorIds(r.operators.map((op) => op.operator_id));
     setErrors({});
     setDialogOpen(true);
   };
@@ -92,6 +96,7 @@ export default function RoutesPage() {
             name: form.name.trim(),
             origin: form.origin.trim(),
             destination: form.destination.trim(),
+            operator_ids: selectedOperatorIds,
           },
         });
         toast.success("Route updated");
@@ -100,6 +105,7 @@ export default function RoutesPage() {
           name: form.name.trim(),
           origin: form.origin.trim(),
           destination: form.destination.trim(),
+          operator_ids: selectedOperatorIds,
         });
         toast.success("Route created");
       }
@@ -186,6 +192,7 @@ export default function RoutesPage() {
                   <th className="px-4 py-3 font-medium">Name</th>
                   <th className="px-4 py-3 font-medium">Origin</th>
                   <th className="px-4 py-3 font-medium">Destination</th>
+                  <th className="px-4 py-3 font-medium">Operators</th>
                   <th className="px-4 py-3 font-medium text-right">Actions</th>
                 </tr>
               </thead>
@@ -198,6 +205,11 @@ export default function RoutesPage() {
                     <td className="px-4 py-3 font-medium text-slate-900">{r.name}</td>
                     <td className="px-4 py-3 text-slate-700">{r.origin}</td>
                     <td className="px-4 py-3 text-slate-700">{r.destination}</td>
+                    <td className="px-4 py-3 text-slate-700">
+                      {r.operators?.length > 0
+                        ? r.operators.map((op) => op.operator_name).join(", ")
+                        : "—"}
+                    </td>
                     <td className="px-4 py-3 text-right">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -280,6 +292,31 @@ export default function RoutesPage() {
                 placeholder="e.g. Alabang"
               />
               {errors.destination && <p className="text-xs text-red-600">{errors.destination}</p>}
+            </div>
+
+            <div className="space-y-2">
+              <Label>Assigned Operators</Label>
+              {!operators || operators.length === 0 ? (
+                <p className="text-xs text-slate-500">No operators available.</p>
+              ) : (
+                <div className="max-h-40 space-y-2 overflow-y-auto rounded-md border border-slate-200 p-2">
+                  {operators.map((op) => (
+                    <label key={op.id} className="flex items-center gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4 rounded border-slate-300"
+                        checked={selectedOperatorIds.includes(op.id)}
+                        onChange={(e) =>
+                          setSelectedOperatorIds((prev) =>
+                            e.target.checked ? [...prev, op.id] : prev.filter((id) => id !== op.id),
+                          )
+                        }
+                      />
+                      <span className="text-slate-700">{op.name}</span>
+                    </label>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
           <DialogFooter>

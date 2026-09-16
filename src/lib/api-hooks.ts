@@ -181,7 +181,7 @@ export function useRoutes() {
 export function useCreateRoute() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (body: { name: string; origin: string; destination: string }) =>
+    mutationFn: (body: { name: string; origin: string; destination: string; operator_ids?: string[] }) =>
       api.post<Route>("/api/admin/routes", body),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin", "routes"] });
@@ -198,7 +198,7 @@ export function useUpdateRoute() {
       body,
     }: {
       id: string;
-      body: Partial<{ name: string; origin: string; destination: string }>;
+      body: Partial<{ name: string; origin: string; destination: string; operator_ids: string[] }>;
     }) => api.put<Route>(`/api/admin/routes/${id}`, body),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin", "routes"] });

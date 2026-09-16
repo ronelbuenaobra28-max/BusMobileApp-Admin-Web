@@ -82,6 +82,12 @@ export interface Route {
   origin_lng: number | null;
   destination_lat: number | null;
   destination_lng: number | null;
+  operators: OperatorAssignment[];
+}
+
+export interface OperatorAssignment {
+  operator_id: string;
+  operator_name: string;
 }
 
 export interface GeocodingResult {
@@ -123,6 +129,9 @@ export interface Trip {
   price: number;
   available_seats: number;
   arrival_time: string | null;
+  bus_number: string;
+  operator_id: string | null;
+  operator_name: string | null;
 }
 
 export interface Terminal {
