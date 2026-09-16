@@ -1,15 +1,21 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowRight, Users, MapPin } from "lucide-react";
 import { PageHeader, Card, Skeleton, Badge, Dialog, DialogContent, DialogHeader, DialogTitle, Button } from "@/components/ui";
-import { useOperators, useOperatorStats, useOperatorRoutes } from "@/lib/api-hooks";
-import type { Operator } from "@/types";
+import { useOperators, useOperatorRoutes, useOperatorStatsBatch } from "@/lib/api-hooks";
+import type { Operator, OperatorStats } from "@/types";
 
-function OperatorCard({ operator, onSelect }: { operator: Operator; onSelect: (operator: Operator) => void }) {
-  const { data: stats, isLoading: statsLoading } = useOperatorStats(operator.id);
-
+function OperatorCard({
+  operator,
+  stats,
+  onSelect,
+}: {
+  operator: Operator;
+  stats?: OperatorStats;
+  onSelect: (operator: Operator) => void;
+}) {
   return (
     <Card
       className="cursor-pointer transition-shadow hover:shadow-md"
@@ -37,11 +43,11 @@ function OperatorCard({ operator, onSelect }: { operator: Operator; onSelect: (o
         <div className="mt-4 flex items-center gap-6 text-sm text-slate-600">
           <div className="flex items-center gap-1.5">
             <Users className="h-4 w-4 text-slate-400" />
-            <span>{statsLoading ? "—" : `${stats?.bus_count ?? 0} Buses`}</span>
+            <span>{stats ? `${stats.bus_count} Buses` : "—"}</span>
           </div>
           <div className="flex items-center gap-1.5">
             <MapPin className="h-4 w-4 text-slate-400" />
-            <span>{statsLoading ? "—" : `${stats?.route_count ?? 0} Routes`}</span>
+            <span>{stats ? `${stats.route_count} Routes` : "—"}</span>
           </div>
         </div>
       </div>
@@ -120,6 +126,8 @@ function OperatorRoutesModal({ operator, onClose }: { operator: Operator; onClos
 
 export default function StopsPage() {
   const { data: operators, isLoading, error } = useOperators();
+  const operatorIds = useMemo(() => (operators ?? []).map((o) => o.id), [operators]);
+  const { data: statsBatch } = useOperatorStatsBatch(operatorIds);
   const [selectedOperator, setSelectedOperator] = useState<Operator | null>(null);
 
   return (
@@ -164,6 +172,7 @@ export default function StopsPage() {
             <OperatorCard
               key={operator.id}
               operator={operator}
+              stats={statsBatch?.[operator.id]}
               onSelect={setSelectedOperator}
             />
           ))}

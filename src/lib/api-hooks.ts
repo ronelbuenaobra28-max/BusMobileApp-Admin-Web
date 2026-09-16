@@ -482,3 +482,15 @@ export function useOperatorStats(operatorId: string) {
     enabled: !!operatorId,
   });
 }
+
+export function useOperatorStatsBatch(operatorIds: string[]) {
+  return useQuery({
+    queryKey: ["admin", "operators", "stats-batch", operatorIds.sort().join(",")],
+    queryFn: () => {
+      const qs = new URLSearchParams();
+      qs.set("ids", operatorIds.join(","));
+      return api.get<Record<string, OperatorStats>>(`/api/admin/operators/batch-stats?${qs.toString()}`);
+    },
+    enabled: operatorIds.length > 0,
+  });
+}

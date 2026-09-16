@@ -295,7 +295,7 @@ export default function RouteStopsManagePage() {
               <Button onClick={() => openAddStop()}>
                 + Add Stop
               </Button>
-              <Button variant="outline" onClick={() => navigate(`/stops/${operatorId}`)}>
+              <Button variant="outline" onClick={() => navigate(`/stops`)}>
                 <ArrowLeft className="mr-2 h-4 w-4" /> Back
               </Button>
             </div>
