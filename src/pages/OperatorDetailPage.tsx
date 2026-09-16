@@ -1,6 +1,7 @@
 "use client";
 
 import { useParams, useNavigate } from "react-router-dom";
+import { useMemo } from "react";
 import { ArrowLeft } from "lucide-react";
 import { PageHeader, Button, Card, Skeleton } from "@/components/ui";
 import { useOperators, useBuses, useRoutes, useTrips } from "@/lib/api-hooks";
@@ -15,11 +16,16 @@ export default function OperatorDetailPage() {
 
   const operator = operators?.find((o) => o.id === id);
   const operatorBuses = buses?.filter((b) => b.operator_id === id) ?? [];
-  const relatedRouteIds = new Set(
-    trips?.filter((t) => t.route_id).map((t) => t.route_id),
+  const operatorBusIds = useMemo(
+    () => new Set(operatorBuses.map((b) => b.id)),
+    [operatorBuses],
+  );
+  const relatedTrips = trips?.filter((t) => t.bus_id && operatorBusIds.has(t.bus_id)) ?? [];
+  const relatedRouteIds = useMemo(
+    () => new Set(relatedTrips.map((t) => t.route_id).filter((routeId): routeId is string => Boolean(routeId))),
+    [relatedTrips],
   );
   const relatedRoutes = routes?.filter((r) => relatedRouteIds.has(r.id)) ?? [];
-  const relatedTrips = trips?.filter((t) => t.route_id && relatedRouteIds.has(t.route_id)) ?? [];
 
   if (loadingOp) {
     return (
