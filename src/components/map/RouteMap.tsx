@@ -100,6 +100,7 @@ function RouteMap({
     const map = new maplibregl.Map({
       container,
       style: "https://tiles.openfreemap.org/styles/liberty",
+      antialias: true,
       transformRequest: (url, resourceType) => {
         if (
           resourceType === "Tile" &&
@@ -113,7 +114,7 @@ function RouteMap({
             ),
           };
         }
-        return { url };
+        return undefined;
       },
       center: [(bounds[0][0] + bounds[1][0]) / 2, (bounds[0][1] + bounds[1][1]) / 2],
       zoom: 12,
@@ -122,7 +123,27 @@ function RouteMap({
     map.addControl(new maplibregl.NavigationControl(), "top-right");
     mapRef.current = map;
 
+    map.on("error", (e) => {
+      console.error("[RouteMap] MapLibre error:", e);
+    });
+
+    map.on("webglcontextlost", (e) => {
+      console.error("[RouteMap] WebGL context lost:", e);
+    });
+
+    map.on("webglcontextrestored", () => {
+      console.log("[RouteMap] WebGL context restored");
+      map.resize();
+    });
+
     map.on("load", () => {
+      map.resize();
+      const canvas = map.getCanvas();
+      const gl =
+        (canvas.getContext("webgl2") as WebGLRenderingContext | null) ||
+        (canvas.getContext("webgl") as WebGLRenderingContext | null);
+      console.log("[RouteMap] Canvas size:", canvas.width, canvas.height);
+      console.log("[RouteMap] WebGL context:", gl ? "available" : "NOT available");
       map.addSource("route-line", {
         type: "geojson",
         data: currentRouteGeometry?.coordinates && currentRouteGeometry.coordinates.length >= 2
