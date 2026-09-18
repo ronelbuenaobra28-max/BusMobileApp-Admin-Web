@@ -78,10 +78,6 @@ export interface Route {
   origin: string;
   destination: string;
   distance_km: number | null;
-  origin_lat: number | null;
-  origin_lng: number | null;
-  destination_lat: number | null;
-  destination_lng: number | null;
   operators: OperatorAssignment[];
 }
 
