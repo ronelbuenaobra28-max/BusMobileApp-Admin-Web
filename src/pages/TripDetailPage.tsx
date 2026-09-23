@@ -72,7 +72,7 @@ export default function TripDetailPage() {
             <p className="text-sm text-slate-500">Status</p>
             <Badge
               variant={
-                trip.status === "departed"
+                trip.status === "active"
                   ? "success"
                   : trip.status === "cancelled"
                     ? "destructive"

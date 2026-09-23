@@ -13,6 +13,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
   DropdownMenuContent,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  Label,
   ConfirmDialog,
   Skeleton,
 } from "@/components/ui";
@@ -32,8 +39,8 @@ export default function DriversPage() {
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editing, setEditing] = useState<{ id: string; full_name: string; license_no: string; status: string } | null>(null);
-  const [form, setForm] = useState({ full_name: "", license_no: "", status: "active" });
+  const [editing, setEditing] = useState<{ id: string; user_id: string; license_no: string; status: string } | null>(null);
+  const [form, setForm] = useState({ user_id: "", license_no: "", status: "available" });
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -43,29 +50,29 @@ export default function DriversPage() {
 
   const openCreate = () => {
     setEditing(null);
-    setForm({ full_name: "", license_no: "", status: "active" });
+    setForm({ user_id: "", license_no: "", status: "available" });
     setDialogOpen(true);
   };
 
-  const openEdit = (d: { id: string; full_name: string; license_no: string; status: string }) => {
+  const openEdit = (d: { id: string; user_id: string; license_no: string; status: string }) => {
     setEditing(d);
-    setForm({ full_name: d.full_name, license_no: d.license_no, status: d.status });
+    setForm({ user_id: d.user_id, license_no: d.license_no, status: d.status });
     setDialogOpen(true);
   };
 
   const doSave = async () => {
-    if (!form.full_name.trim() || !form.license_no.trim()) return;
+    if (!form.user_id.trim() || !form.license_no.trim()) return;
     setSubmitting(true);
     try {
       if (editing) {
         await updateDriver.mutateAsync({
           id: editing.id,
-          body: { full_name: form.full_name, license_no: form.license_no, status: form.status },
+          body: { license_no: form.license_no, status: form.status },
         });
         toast.success("Driver updated");
       } else {
         await createDriver.mutateAsync({
-          full_name: form.full_name,
+          user_id: form.user_id,
           license_no: form.license_no,
         });
         toast.success("Driver created");
@@ -83,10 +90,10 @@ export default function DriversPage() {
     if (!deleteId) return;
     try {
       await removeDriver.mutateAsync(deleteId);
-      toast.success("Driver removed");
+      toast.success("Driver deactivated");
       setDeleteId(null);
     } catch {
-      toast.error("Failed to remove driver");
+      toast.error("Failed to deactivate driver");
     }
   };
 
@@ -202,28 +209,66 @@ export default function DriversPage() {
         onOpenChange={(open: boolean) => {
           if (!open) setDeleteId(null);
         }}
-        title="Remove driver"
-        description="This driver will be removed from the system. Are you sure?"
-        confirmLabel="Remove"
+        title="Deactivate driver"
+        description="This driver will be deactivated and removed from active scheduling. Are you sure?"
+        confirmLabel="Deactivate"
         onConfirm={handleRemove}
         loading={removeDriver.isPending}
       />
 
-      <ConfirmDialog
-        open={dialogOpen}
-        onOpenChange={(open: boolean) => {
-          if (!open) {
-            setDialogOpen(false);
-            setEditing(null);
-          }
-        }}
-        title={editing ? "Edit Driver" : "Add Driver"}
-        description={editing ? "Update driver details below." : "Enter driver details below."}
-        confirmLabel={editing ? "Save changes" : "Create driver"}
-        variant="default"
-        onConfirm={doSave}
-        loading={submitting}
-      />
+      <Dialog open={dialogOpen} onOpenChange={(open) => { if (!open) { setDialogOpen(false); setEditing(null); } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editing ? "Edit Driver" : "Add Driver"}</DialogTitle>
+            <DialogDescription>{editing ? "Update driver details below." : "Enter driver details below."}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-1">
+              <Label htmlFor="user_id">User ID</Label>
+              <Input
+                id="user_id"
+                value={form.user_id}
+                onChange={(e) => setForm((f) => ({ ...f, user_id: e.target.value }))}
+                placeholder="e.g. 123e4567-e89b-12d3-a456-426614174000"
+                disabled={!!editing}
+              />
+            </div>
+
+            <div className="space-y-1">
+              <Label htmlFor="license_no">License No</Label>
+              <Input
+                id="license_no"
+                value={form.license_no}
+                onChange={(e) => setForm((f) => ({ ...f, license_no: e.target.value }))}
+                placeholder="e.g. DL-12345"
+              />
+            </div>
+
+            {editing && (
+              <div className="space-y-1">
+                <Label htmlFor="status">Status</Label>
+                <select
+                  className="flex h-9 w-full rounded-md border border-slate-200 bg-white px-3 py-1 text-sm"
+                  value={form.status}
+                  onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))}
+                >
+                  <option value="available">Available</option>
+                  <option value="on_trip">On Trip</option>
+                  <option value="off_duty">Off Duty</option>
+                </select>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={submitting}>
+              Cancel
+            </Button>
+            <Button onClick={doSave} disabled={submitting}>
+              {submitting ? "Saving..." : editing ? "Save changes" : "Create driver"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

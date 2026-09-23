@@ -120,7 +120,7 @@ export default function ScheduleDetailPage() {
             <div>
               <p className="text-sm text-slate-500">Status</p>
               <span className={`inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-medium ${
-                trip.status === "departed" ? "border-transparent bg-emerald-100 text-emerald-700" :
+                trip.status === "active" ? "border-transparent bg-emerald-100 text-emerald-700" :
                 trip.status === "cancelled" ? "border-transparent bg-red-100 text-red-700" :
                 "border-transparent bg-slate-100 text-slate-700"
               }`}>
@@ -216,8 +216,8 @@ export default function ScheduleDetailPage() {
                       }
                     >
                       <option value="scheduled">Scheduled</option>
-                      <option value="departed">Departed</option>
-                      <option value="arrived">Arrived</option>
+                      <option value="active">Active</option>
+                      <option value="completed">Completed</option>
                       <option value="cancelled">Cancelled</option>
                     </select>
                   </div>

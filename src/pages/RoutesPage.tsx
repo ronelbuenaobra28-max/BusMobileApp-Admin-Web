@@ -123,8 +123,9 @@ export default function RoutesPage() {
     try {
       await deleteRoute.mutateAsync(deleteId);
       toast.success("Route deleted");
-    } catch {
-      toast.error("Failed to delete route");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to delete route";
+      toast.error(message);
     } finally {
       setDeleteId(null);
     }

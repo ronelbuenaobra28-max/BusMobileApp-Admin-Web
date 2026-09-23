@@ -3,13 +3,16 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { PageHeader, Button, Card, Skeleton } from "@/components/ui";
-import { useDrivers, useTrips } from "@/lib/api-hooks";
+import { useDrivers, useTrips, useUpdateDriver, useRemoveDriver } from "@/lib/api-hooks";
+import { toast } from "sonner";
 
 export default function DriverDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { data: drivers, isLoading: loadingDrivers } = useDrivers();
+  const { data: drivers, isLoading: loadingDrivers, refetch } = useDrivers();
   const { data: trips } = useTrips();
+  const updateDriver = useUpdateDriver();
+  const removeDriver = useRemoveDriver();
 
   const driver = drivers?.find((d) => d.id === id);
   const driverTrips = trips?.filter((t) => t.driver_id === id) ?? [];
@@ -38,21 +41,38 @@ export default function DriverDetailPage() {
     );
   }
 
+  const handleDeactivate = async () => {
+    try {
+      await removeDriver.mutateAsync(driver.id);
+      toast.success("Driver deactivated");
+      navigate("/drivers");
+    } catch {
+      toast.error("Failed to deactivate driver");
+    }
+  };
+
   return (
     <div className="space-y-6">
       <PageHeader
         title={driver.full_name}
         description={
           <span className={`inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-medium ${
-            driver.status === "active" ? "border-transparent bg-emerald-100 text-emerald-700" : "border-transparent bg-slate-100 text-slate-700"
+            driver.status === "available" ? "border-transparent bg-emerald-100 text-emerald-700" : "border-transparent bg-slate-100 text-slate-700"
           }`}>
             {driver.status}
           </span>
         }
         action={
-          <Button variant="outline" onClick={() => navigate(-1)}>
-            <ArrowLeft className="mr-2 h-4 w-4" /> Back
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => navigate("/drivers")}>
+              <ArrowLeft className="mr-2 h-4 w-4" /> Back
+            </Button>
+            {driver.status !== "off_duty" && (
+              <Button variant="destructive" onClick={handleDeactivate}>
+                Deactivate
+              </Button>
+            )}
+          </div>
         }
       />
 
