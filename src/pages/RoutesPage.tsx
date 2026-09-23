@@ -264,7 +264,6 @@ export default function RoutesPage() {
                         checked={bulk.isSelected(r.id)}
                         onCheckedChange={() => bulk.toggle(r.id)}
                         aria-label={`Select ${r.name}`}
-                        onClick={(e) => e.stopPropagation()}
                       />
                     </td>
                     <td

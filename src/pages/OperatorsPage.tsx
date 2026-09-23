@@ -266,7 +266,6 @@ export default function OperatorsPage() {
                         checked={bulk.isSelected(op.id)}
                         onCheckedChange={() => bulk.toggle(op.id)}
                         aria-label={`Select ${op.name}`}
-                        onClick={(e) => e.stopPropagation()}
                       />
                     </td>
                     <td

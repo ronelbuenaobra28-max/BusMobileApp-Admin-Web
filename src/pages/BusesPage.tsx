@@ -271,7 +271,6 @@ export default function BusesPage() {
                           checked={bulk.isSelected(b.id)}
                           onCheckedChange={() => bulk.toggle(b.id)}
                           aria-label={`Select ${b.bus_number}`}
-                          onClick={(e) => e.stopPropagation()}
                         />
                       </td>
                       <td

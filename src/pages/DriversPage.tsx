@@ -224,7 +224,6 @@ export default function DriversPage() {
                         checked={bulk.isSelected(d.id)}
                         onCheckedChange={() => bulk.toggle(d.id)}
                         aria-label={`Select ${d.full_name}`}
-                        onClick={(e) => e.stopPropagation()}
                       />
                     </td>
                     <td

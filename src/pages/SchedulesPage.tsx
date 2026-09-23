@@ -317,7 +317,6 @@ export default function SchedulesPage() {
                         checked={bulk.isSelected(t.id)}
                         onCheckedChange={() => bulk.toggle(t.id)}
                         aria-label={`Select trip ${t.id}`}
-                        onClick={(e) => e.stopPropagation()}
                       />
                     </td>
                     <td className="px-4 py-3 font-medium text-slate-900">
