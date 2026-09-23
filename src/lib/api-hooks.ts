@@ -131,11 +131,8 @@ export function useDrivers() {
 export function useCreateDriver() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (body: {
-      full_name: string;
-      license_no: string;
-      user_id?: string;
-    }) => api.post<Driver>("/api/admin/drivers", body),
+    mutationFn: (body: { user_id: string; license_no: string }) =>
+      api.post<Driver>("/api/admin/drivers", body),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin", "drivers"] });
       qc.invalidateQueries({ queryKey: ["dashboard", "stats"] });
@@ -151,7 +148,7 @@ export function useUpdateDriver() {
       body,
     }: {
       id: string;
-      body: Partial<{ full_name: string; license_no: string; status: string }>;
+      body: Partial<{ license_no: string; status: string }>;
     }) => api.put<Driver>(`/api/admin/drivers/${id}`, body),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin", "drivers"] });
@@ -163,7 +160,7 @@ export function useRemoveDriver() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) =>
-      api.del<{ success: boolean }>(`/api/admin/drivers/${id}`),
+      api.del<void>(`/api/admin/drivers/${id}`),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin", "drivers"] });
       qc.invalidateQueries({ queryKey: ["dashboard", "stats"] });
@@ -210,7 +207,7 @@ export function useDeleteRoute() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) =>
-      api.del<{ success: boolean }>(`/api/admin/routes/${id}`),
+      api.del<void>(`/api/admin/routes/${id}`),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin", "routes"] });
       qc.invalidateQueries({ queryKey: ["dashboard", "stats"] });
@@ -371,5 +368,23 @@ export function useAnalyticsFleet() {
   return useQuery({
     queryKey: ["analytics", "fleet"],
     queryFn: () => api.get<AnalyticsFleet>("/api/admin/analytics/fleet"),
+  });
+}
+
+export function useSettings() {
+  return useQuery({
+    queryKey: ["admin", "settings"],
+    queryFn: () => api.get<AdminSettings>("/api/admin/settings"),
+  });
+}
+
+export function useUpdateSetting() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ key, value }: { key: string; value: string }) =>
+      api.put<SettingOut>(`/api/admin/settings/${key}`, { value }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin", "settings"] });
+    },
   });
 }

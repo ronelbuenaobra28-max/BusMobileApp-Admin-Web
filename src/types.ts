@@ -149,6 +149,17 @@ export interface FleetStats {
   revenue_today: number;
 }
 
-export type TripStatus = "scheduled" | "departed" | "arrived" | "cancelled";
+export type TripStatus = "scheduled" | "active" | "completed" | "cancelled";
 export type BusStatus = "active" | "maintenance" | "retired";
 export type PointType = "origin" | "checkpoint" | "passenger_stop" | "destination";
+
+export interface AdminSettings {
+  booking_hold_minutes: number;
+  reminder_window_hours: number;
+}
+
+export interface SettingOut {
+  key: string;
+  value: number | string;
+  updated_at: string | null;
+}
