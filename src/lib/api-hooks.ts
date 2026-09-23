@@ -14,6 +14,8 @@ import type {
   AnalyticsBookingStatus,
   AnalyticsOperators,
   AnalyticsFleet,
+  AdminSettings,
+  SettingOut,
 } from "@/types";
 
 export function useDashboardStats() {

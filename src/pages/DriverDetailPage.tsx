@@ -3,15 +3,14 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { PageHeader, Button, Card, Skeleton } from "@/components/ui";
-import { useDrivers, useTrips, useUpdateDriver, useRemoveDriver } from "@/lib/api-hooks";
+import { useDrivers, useTrips, useRemoveDriver } from "@/lib/api-hooks";
 import { toast } from "sonner";
 
 export default function DriverDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { data: drivers, isLoading: loadingDrivers, refetch } = useDrivers();
+  const { data: drivers, isLoading: loadingDrivers } = useDrivers();
   const { data: trips } = useTrips();
-  const updateDriver = useUpdateDriver();
   const removeDriver = useRemoveDriver();
 
   const driver = drivers?.find((d) => d.id === id);
