@@ -39,8 +39,8 @@ export default function DriversPage() {
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editing, setEditing] = useState<{ id: string; user_id: string; license_no: string; status: string } | null>(null);
-  const [form, setForm] = useState({ user_id: "", license_no: "", status: "available" });
+  const [editing, setEditing] = useState<{ id: string; name: string; license_no: string; status: string } | null>(null);
+  const [form, setForm] = useState({ name: "", license_no: "", status: "available" });
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -50,29 +50,29 @@ export default function DriversPage() {
 
   const openCreate = () => {
     setEditing(null);
-    setForm({ user_id: "", license_no: "", status: "available" });
+    setForm({ name: "", license_no: "", status: "available" });
     setDialogOpen(true);
   };
 
-  const openEdit = (d: { id: string; user_id: string; license_no: string; status: string }) => {
-    setEditing(d);
-    setForm({ user_id: d.user_id, license_no: d.license_no, status: d.status });
+  const openEdit = (d: { id: string; full_name: string; license_no: string; status: string }) => {
+    setEditing({ id: d.id, name: d.full_name, license_no: d.license_no, status: d.status });
+    setForm({ name: d.full_name, license_no: d.license_no, status: d.status });
     setDialogOpen(true);
   };
 
   const doSave = async () => {
-    if (!form.user_id.trim() || !form.license_no.trim()) return;
+    if (!form.name.trim() || !form.license_no.trim()) return;
     setSubmitting(true);
     try {
       if (editing) {
         await updateDriver.mutateAsync({
           id: editing.id,
-          body: { license_no: form.license_no, status: form.status },
+          body: { name: form.name, license_no: form.license_no, status: form.status },
         });
         toast.success("Driver updated");
       } else {
         await createDriver.mutateAsync({
-          user_id: form.user_id,
+          name: form.name,
           license_no: form.license_no,
         });
         toast.success("Driver created");
@@ -224,13 +224,12 @@ export default function DriversPage() {
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-1">
-              <Label htmlFor="user_id">User ID</Label>
+              <Label htmlFor="name">Name</Label>
               <Input
-                id="user_id"
-                value={form.user_id}
-                onChange={(e) => setForm((f) => ({ ...f, user_id: e.target.value }))}
-                placeholder="e.g. 123e4567-e89b-12d3-a456-426614174000"
-                disabled={!!editing}
+                id="name"
+                value={form.name}
+                onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                placeholder="e.g. Juan Dela Cruz"
               />
             </div>
 
