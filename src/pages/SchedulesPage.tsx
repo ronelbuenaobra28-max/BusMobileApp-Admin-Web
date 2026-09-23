@@ -28,7 +28,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui";
+import { Checkbox } from "@/components/ui/checkbox";
+import { BulkActionToolbar } from "@/components/bulk-action-toolbar";
+import { BulkConfirmDialog } from "@/components/bulk-confirm-dialog";
 import { useTrips, useCreateTrip, useCancelTrip, useRoutes, useBuses, useDrivers } from "@/lib/api-hooks";
+import { useBulkSelection } from "@/hooks/use-bulk-selection";
 import { toast } from "sonner";
 
 export default function SchedulesPage() {
@@ -77,6 +81,8 @@ export default function SchedulesPage() {
   const operatorBuses = buses?.filter((b) => b.operator_id === form.operator_id) ?? [];
   const selectedBus = buses?.find((b) => b.id === form.bus_id);
   const selectedDriver = drivers?.find((d) => d.id === form.driver_id);
+
+  const bulk = useBulkSelection(tripsToRender, (t) => t.id);
 
   const validate = (): boolean => {
     const next: typeof errors = {};
@@ -160,6 +166,40 @@ export default function SchedulesPage() {
     setErrors((prev) => ({ ...prev, operator_id: undefined, bus_id: undefined }));
   };
 
+  const [bulkLoading, setBulkLoading] = useState(false);
+  const [bulkOpen, setBulkOpen] = useState(false);
+
+  const handleBulkCancel = async () => {
+    setBulkLoading(true);
+    let success = 0;
+    let failed = 0;
+
+    for (const id of bulk.selectedIds) {
+      try {
+        await cancelTrip.mutateAsync(id);
+        success++;
+      } catch {
+        failed++;
+      }
+    }
+
+    bulk.clear();
+
+    if (failed === 0) {
+      toast.success(`${success} trip${success !== 1 ? "s" : ""} cancelled`);
+      setBulkOpen(false);
+    } else if (success === 0) {
+      toast.error(`Failed to cancel ${failed} trip${failed !== 1 ? "s" : ""}`);
+    } else {
+      toast.error(`${success} cancelled, ${failed} failed`);
+    }
+    setBulkLoading(false);
+  };
+
+  const selectedTripLabels = tripsToRender
+    .filter((t) => bulk.isSelected(t.id))
+    .map((t) => `${t.route_id} - ${new Date(t.scheduled_departure).toLocaleString()}`);
+
   const canSubmit =
     form.route_id &&
     form.operator_id &&
@@ -180,6 +220,13 @@ export default function SchedulesPage() {
             <Plus className="mr-2 h-4 w-4" /> Schedule Trip
           </Button>
         }
+      />
+
+      <BulkActionToolbar
+        selectedCount={bulk.selectedCount}
+        onBulkDelete={() => setBulkOpen(true)}
+        loading={bulkLoading}
+        label="Cancel"
       />
 
       <Card>
@@ -241,6 +288,14 @@ export default function SchedulesPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-100 text-left text-slate-500">
+                  <th className="px-4 py-3 w-10">
+                    <Checkbox
+                      checked={bulk.isAllSelected}
+                      indeterminate={bulk.isIndeterminate}
+                      onCheckedChange={bulk.toggleAll}
+                      aria-label="Select all trips"
+                    />
+                  </th>
                   <th className="px-4 py-3 font-medium">Route</th>
                   <th className="px-4 py-3 font-medium">Departure</th>
                   <th className="px-4 py-3 font-medium">Status</th>
@@ -253,8 +308,18 @@ export default function SchedulesPage() {
                 {tripsToRender.map((t) => (
                   <tr
                     key={t.id}
-                    className="border-b border-slate-100 hover:bg-slate-50/50"
+                    className={`border-b border-slate-100 hover:bg-slate-50/50 ${
+                      bulk.isSelected(t.id) ? "bg-slate-50" : ""
+                    }`}
                   >
+                    <td className="px-4 py-3">
+                      <Checkbox
+                        checked={bulk.isSelected(t.id)}
+                        onCheckedChange={() => bulk.toggle(t.id)}
+                        aria-label={`Select trip ${t.id}`}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    </td>
                     <td className="px-4 py-3 font-medium text-slate-900">
                       {t.route_id}
                     </td>
@@ -307,6 +372,31 @@ export default function SchedulesPage() {
           </div>
         )}
       </Card>
+
+      <BulkConfirmDialog
+        open={bulkOpen}
+        onOpenChange={(open) => {
+          setBulkOpen(open);
+        }}
+        onConfirm={handleBulkCancel}
+        loading={bulkLoading}
+        title={`Cancel ${selectedTripLabels.length} trip${selectedTripLabels.length !== 1 ? "s" : ""}?`}
+        description="The selected scheduled trips will be cancelled. This action can be reversed by editing the trip status."
+        confirmLabel="Cancel trips"
+        selectedNames={selectedTripLabels}
+      />
+
+      <ConfirmDialog
+        open={!!deleteId}
+        onOpenChange={(open: boolean) => {
+          if (!open) setDeleteId(null);
+        }}
+        title="Cancel trip"
+        description="This trip will be cancelled. Are you sure?"
+        confirmLabel="Cancel trip"
+        onConfirm={handleCancel}
+        loading={cancelTrip.isPending}
+      />
 
       <Dialog open={dialogOpen} onOpenChange={(open) => { if (!open) { setDialogOpen(false); } }}>
         <DialogContent>
@@ -485,7 +575,7 @@ export default function SchedulesPage() {
           if (!open) setDeleteId(null);
         }}
         title="Cancel trip"
-        description="This scheduled trip will be cancelled. Are you sure?"
+        description="This trip will be cancelled. Are you sure?"
         confirmLabel="Cancel trip"
         onConfirm={handleCancel}
         loading={cancelTrip.isPending}

@@ -15,8 +15,18 @@ import {
   DropdownMenuContent,
   ConfirmDialog,
   Skeleton,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
 } from "@/components/ui";
+import { Checkbox } from "@/components/ui/checkbox";
+import { BulkActionToolbar } from "@/components/bulk-action-toolbar";
+import { BulkConfirmDialog } from "@/components/bulk-confirm-dialog";
 import { useOperators, useCreateOperator, useUpdateOperator, useDeactivateOperator } from "@/lib/api-hooks";
+import { useBulkSelection } from "@/hooks/use-bulk-selection";
 import { toast } from "sonner";
 
 export default function OperatorsPage() {
@@ -34,10 +44,14 @@ export default function OperatorsPage() {
   const [activateId, setActivateId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [bulkLoading, setBulkLoading] = useState(false);
+  const [bulkOpen, setBulkOpen] = useState(false);
 
   const filtered = operators?.filter((op) =>
     op.name.toLowerCase().includes(search.toLowerCase()),
   );
+
+  const bulk = useBulkSelection(filtered ?? [], (op) => op.id);
 
   const openCreate = () => {
     setEditing(null);
@@ -121,8 +135,39 @@ export default function OperatorsPage() {
     }
   };
 
+  const handleBulkDeactivate = async () => {
+    setBulkLoading(true);
+    let success = 0;
+    let failed = 0;
+
+    for (const id of bulk.selectedIds) {
+      try {
+        await deactivateOp.mutateAsync(id);
+        success++;
+      } catch {
+        failed++;
+      }
+    }
+
+    bulk.clear();
+
+    if (failed === 0) {
+      toast.success(`${success} operator${success !== 1 ? "s" : ""} deactivated`);
+      setBulkOpen(false);
+    } else if (success === 0) {
+      toast.error(`Failed to deactivate ${failed} operator${failed !== 1 ? "s" : ""}`);
+    } else {
+      toast.error(`${success} deactivated, ${failed} failed`);
+    }
+    setBulkLoading(false);
+  };
+
   const isNameValid = name.trim().length > 0;
   const canSubmit = isNameValid && !submitting;
+
+  const selectedOperatorNames = (filtered ?? [])
+    .filter((op) => bulk.isSelected(op.id))
+    .map((op) => op.name);
 
   return (
     <div className="space-y-4">
@@ -134,6 +179,13 @@ export default function OperatorsPage() {
             <Plus className="mr-2 h-4 w-4" /> Add Operator
           </Button>
         }
+      />
+
+      <BulkActionToolbar
+        selectedCount={bulk.selectedCount}
+        onBulkDelete={() => setBulkOpen(true)}
+        loading={bulkLoading}
+        label="Deactivate"
       />
 
       <Card>
@@ -188,6 +240,14 @@ export default function OperatorsPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-100 text-left text-slate-500">
+                  <th className="px-4 py-3 w-10">
+                    <Checkbox
+                      checked={bulk.isAllSelected}
+                      indeterminate={bulk.isIndeterminate}
+                      onCheckedChange={bulk.toggleAll}
+                      aria-label="Select all operators"
+                    />
+                  </th>
                   <th className="px-4 py-3 font-medium">Name</th>
                   <th className="px-4 py-3 font-medium">Status</th>
                   <th className="px-4 py-3 font-medium text-right">Actions</th>
@@ -197,9 +257,24 @@ export default function OperatorsPage() {
                 {filtered.map((op) => (
                   <tr
                     key={op.id}
-                    className="border-b border-slate-100 hover:bg-slate-50/50"
+                    className={`border-b border-slate-100 hover:bg-slate-50/50 ${
+                      bulk.isSelected(op.id) ? "bg-slate-50" : ""
+                    }`}
                   >
-                    <td className="px-4 py-3 font-medium text-slate-900">{op.name}</td>
+                    <td className="px-4 py-3">
+                      <Checkbox
+                        checked={bulk.isSelected(op.id)}
+                        onCheckedChange={() => bulk.toggle(op.id)}
+                        aria-label={`Select ${op.name}`}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    </td>
+                    <td
+                      className="px-4 py-3 font-medium text-slate-900 cursor-pointer"
+                      onClick={() => navigate(`/operators/${op.id}`)}
+                    >
+                      {op.name}
+                    </td>
                     <td className="px-4 py-3">
                       <span className={`inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-medium ${
                         op.active === "active" ? "border-transparent bg-emerald-100 text-emerald-700" : "border-transparent bg-slate-100 text-slate-700"
@@ -267,6 +342,19 @@ export default function OperatorsPage() {
         )}
       </Card>
 
+      <BulkConfirmDialog
+        open={bulkOpen}
+        onOpenChange={(open) => {
+          setBulkOpen(open);
+        }}
+        onConfirm={handleBulkDeactivate}
+        loading={bulkLoading}
+        title={`Deactivate ${selectedOperatorNames.length} operator${selectedOperatorNames.length !== 1 ? "s" : ""}?`}
+        description="The selected operators will be marked as inactive. This action can be reversed by activating them again."
+        confirmLabel="Deactivate"
+        selectedNames={selectedOperatorNames}
+      />
+
       <ConfirmDialog
         open={!!deleteId}
         onOpenChange={(open: boolean) => {
@@ -291,40 +379,38 @@ export default function OperatorsPage() {
         loading={updateOp.isPending}
       />
 
-      <ConfirmDialog
-        open={dialogOpen}
-        onOpenChange={(open: boolean) => {
-          if (!open) {
-            setDialogOpen(false);
-            setEditing(null);
-            setName("");
-            setNameError("");
-          }
-        }}
-        title={editing ? "Edit Operator" : "Add Operator"}
-        description={editing ? "Update the operator name below." : "Enter the operator name below."}
-        confirmLabel={editing ? "Save changes" : "Create operator"}
-        variant="default"
-        onConfirm={doSave}
-        loading={submitting || createOp.isPending || updateOp.isPending}
-      >
-        <div className="space-y-3">
-          <Input
-            value={name}
-            onChange={(e) => handleNameChange(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && canSubmit) {
-                doSave();
-              }
-            }}
-            placeholder="Operator name"
-            autoFocus
-          />
-          {nameError && (
-            <p className="text-xs text-red-600">{nameError}</p>
-          )}
-        </div>
-      </ConfirmDialog>
+      <Dialog open={dialogOpen} onOpenChange={(open) => { if (!open) { setDialogOpen(false); setEditing(null); setName(""); setNameError(""); } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editing ? "Edit Operator" : "Add Operator"}</DialogTitle>
+            <DialogDescription>{editing ? "Update the operator name below." : "Enter the operator name below."}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <Input
+              value={name}
+              onChange={(e) => handleNameChange(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && canSubmit) {
+                  doSave();
+                }
+              }}
+              placeholder="Operator name"
+              autoFocus
+            />
+            {nameError && (
+              <p className="text-xs text-red-600">{nameError}</p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={submitting}>
+              Cancel
+            </Button>
+            <Button onClick={doSave} disabled={!canSubmit}>
+              {submitting ? "Saving..." : editing ? "Save changes" : "Create operator"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

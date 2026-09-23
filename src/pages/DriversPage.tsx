@@ -23,12 +23,16 @@ import {
   ConfirmDialog,
   Skeleton,
 } from "@/components/ui";
+import { Checkbox } from "@/components/ui/checkbox";
+import { BulkActionToolbar } from "@/components/bulk-action-toolbar";
+import { BulkConfirmDialog } from "@/components/bulk-confirm-dialog";
 import {
   useDrivers,
   useCreateDriver,
   useUpdateDriver,
   useRemoveDriver,
 } from "@/lib/api-hooks";
+import { useBulkSelection } from "@/hooks/use-bulk-selection";
 import { toast } from "sonner";
 
 export default function DriversPage() {
@@ -43,10 +47,14 @@ export default function DriversPage() {
   const [form, setForm] = useState({ name: "", license_no: "", status: "available" });
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [bulkLoading, setBulkLoading] = useState(false);
+  const [bulkOpen, setBulkOpen] = useState(false);
 
   const filtered = drivers?.filter((d) =>
     d.full_name.toLowerCase().includes(search.toLowerCase()),
   );
+
+  const bulk = useBulkSelection(filtered ?? [], (d) => d.id);
 
   const openCreate = () => {
     setEditing(null);
@@ -97,6 +105,37 @@ export default function DriversPage() {
     }
   };
 
+  const handleBulkRemove = async () => {
+    setBulkLoading(true);
+    let success = 0;
+    let failed = 0;
+
+    for (const id of bulk.selectedIds) {
+      try {
+        await removeDriver.mutateAsync(id);
+        success++;
+      } catch {
+        failed++;
+      }
+    }
+
+    bulk.clear();
+
+    if (failed === 0) {
+      toast.success(`${success} driver${success !== 1 ? "s" : ""} deactivated`);
+      setBulkOpen(false);
+    } else if (success === 0) {
+      toast.error(`Failed to deactivate ${failed} driver${failed !== 1 ? "s" : ""}`);
+    } else {
+      toast.error(`${success} deactivated, ${failed} failed`);
+    }
+    setBulkLoading(false);
+  };
+
+  const selectedDriverNames = (filtered ?? [])
+    .filter((d) => bulk.isSelected(d.id))
+    .map((d) => d.full_name);
+
   return (
     <div className="space-y-4">
       <PageHeader
@@ -107,6 +146,13 @@ export default function DriversPage() {
             <Plus className="mr-2 h-4 w-4" /> Add Driver
           </Button>
         }
+      />
+
+      <BulkActionToolbar
+        selectedCount={bulk.selectedCount}
+        onBulkDelete={() => setBulkOpen(true)}
+        loading={bulkLoading}
+        label="Deactivate"
       />
 
       <Card>
@@ -151,6 +197,14 @@ export default function DriversPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-100 text-left text-slate-500">
+                  <th className="px-4 py-3 w-10">
+                    <Checkbox
+                      checked={bulk.isAllSelected}
+                      indeterminate={bulk.isIndeterminate}
+                      onCheckedChange={bulk.toggleAll}
+                      aria-label="Select all drivers"
+                    />
+                  </th>
                   <th className="px-4 py-3 font-medium">Name</th>
                   <th className="px-4 py-3 font-medium">License No</th>
                   <th className="px-4 py-3 font-medium">Status</th>
@@ -161,9 +215,24 @@ export default function DriversPage() {
                 {filtered.map((d) => (
                   <tr
                     key={d.id}
-                    className="border-b border-slate-100 hover:bg-slate-50/50"
+                    className={`border-b border-slate-100 hover:bg-slate-50/50 ${
+                      bulk.isSelected(d.id) ? "bg-slate-50" : ""
+                    }`}
                   >
-                    <td className="px-4 py-3 font-medium text-slate-900">{d.full_name}</td>
+                    <td className="px-4 py-3">
+                      <Checkbox
+                        checked={bulk.isSelected(d.id)}
+                        onCheckedChange={() => bulk.toggle(d.id)}
+                        aria-label={`Select ${d.full_name}`}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    </td>
+                    <td
+                      className="px-4 py-3 font-medium text-slate-900 cursor-pointer"
+                      onClick={() => navigate(`/drivers/${d.id}`)}
+                    >
+                      {d.full_name}
+                    </td>
                     <td className="px-4 py-3 text-slate-700">{d.license_no}</td>
                     <td className="px-4 py-3">
                       <span className={`inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-medium ${
@@ -203,6 +272,19 @@ export default function DriversPage() {
           </div>
         )}
       </Card>
+
+      <BulkConfirmDialog
+        open={bulkOpen}
+        onOpenChange={(open) => {
+          setBulkOpen(open);
+        }}
+        onConfirm={handleBulkRemove}
+        loading={bulkLoading}
+        title={`Deactivate ${selectedDriverNames.length} driver${selectedDriverNames.length !== 1 ? "s" : ""}?`}
+        description="The selected drivers will be deactivated and removed from active scheduling."
+        confirmLabel="Deactivate"
+        selectedNames={selectedDriverNames}
+      />
 
       <ConfirmDialog
         open={!!deleteId}

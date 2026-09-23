@@ -28,7 +28,11 @@ import {
   ConfirmDialog,
   Skeleton,
 } from "@/components/ui";
+import { Checkbox } from "@/components/ui/checkbox";
+import { BulkActionToolbar } from "@/components/bulk-action-toolbar";
+import { BulkConfirmDialog } from "@/components/bulk-confirm-dialog";
 import { useBuses, useCreateBus, useUpdateBus, useRetireBus, useOperators } from "@/lib/api-hooks";
+import { useBulkSelection } from "@/hooks/use-bulk-selection";
 import { toast } from "sonner";
 
 const BUS_STATUSES = [
@@ -51,6 +55,8 @@ export default function BusesPage() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState<{ bus_number?: string; capacity?: string; operator_id?: string }>({});
+  const [bulkLoading, setBulkLoading] = useState(false);
+  const [bulkOpen, setBulkOpen] = useState(false);
 
   const filtered = useMemo(() => {
     if (!buses) return [];
@@ -58,6 +64,8 @@ export default function BusesPage() {
     if (!term) return buses;
     return buses.filter((b) => b.bus_number.toLowerCase().includes(term));
   }, [buses, search]);
+
+  const bulk = useBulkSelection(filtered, (b) => b.id);
 
   const openCreate = () => {
     setEditing(null);
@@ -134,7 +142,38 @@ export default function BusesPage() {
     }
   };
 
+  const handleBulkRetire = async () => {
+    setBulkLoading(true);
+    let success = 0;
+    let failed = 0;
+
+    for (const id of bulk.selectedIds) {
+      try {
+        await retireBus.mutateAsync(id);
+        success++;
+      } catch {
+        failed++;
+      }
+    }
+
+    bulk.clear();
+
+    if (failed === 0) {
+      toast.success(`${success} bus${success !== 1 ? "es" : ""} retired`);
+      setBulkOpen(false);
+    } else if (success === 0) {
+      toast.error(`Failed to retire ${failed} bus${failed !== 1 ? "es" : ""}`);
+    } else {
+      toast.error(`${success} retired, ${failed} failed`);
+    }
+    setBulkLoading(false);
+  };
+
   const selectedOperator = operators?.find((op) => op.id === form.operator_id);
+
+  const selectedBusNumbers = filtered
+    .filter((b) => bulk.isSelected(b.id))
+    .map((b) => b.bus_number);
 
   return (
     <div className="space-y-4">
@@ -146,6 +185,13 @@ export default function BusesPage() {
             <Plus className="mr-2 h-4 w-4" /> Add Bus
           </Button>
         }
+      />
+
+      <BulkActionToolbar
+        selectedCount={bulk.selectedCount}
+        onBulkDelete={() => setBulkOpen(true)}
+        loading={bulkLoading}
+        label="Retire"
       />
 
       <Card>
@@ -195,6 +241,14 @@ export default function BusesPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-100 text-left text-slate-500">
+                  <th className="px-4 py-3 w-10">
+                    <Checkbox
+                      checked={bulk.isAllSelected}
+                      indeterminate={bulk.isIndeterminate}
+                      onCheckedChange={bulk.toggleAll}
+                      aria-label="Select all buses"
+                    />
+                  </th>
                   <th className="px-4 py-3 font-medium">Bus #</th>
                   <th className="px-4 py-3 font-medium">Capacity</th>
                   <th className="px-4 py-3 font-medium">Status</th>
@@ -206,8 +260,26 @@ export default function BusesPage() {
                 {filtered.map((b) => {
                   const op = operators?.find((o) => o.id === b.operator_id);
                   return (
-                    <tr key={b.id} className="border-b border-slate-100 hover:bg-slate-50/50">
-                      <td className="px-4 py-3 font-medium text-slate-900">{b.bus_number}</td>
+                    <tr
+                      key={b.id}
+                      className={`border-b border-slate-100 hover:bg-slate-50/50 ${
+                        bulk.isSelected(b.id) ? "bg-slate-50" : ""
+                      }`}
+                    >
+                      <td className="px-4 py-3">
+                        <Checkbox
+                          checked={bulk.isSelected(b.id)}
+                          onCheckedChange={() => bulk.toggle(b.id)}
+                          aria-label={`Select ${b.bus_number}`}
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                      </td>
+                      <td
+                        className="px-4 py-3 font-medium text-slate-900 cursor-pointer"
+                        onClick={() => navigate(`/buses/${b.id}`)}
+                      >
+                        {b.bus_number}
+                      </td>
                       <td className="px-4 py-3 text-slate-900">{b.capacity}</td>
                       <td className="px-4 py-3">
                         <span
@@ -257,6 +329,19 @@ export default function BusesPage() {
           </div>
         )}
       </Card>
+
+      <BulkConfirmDialog
+        open={bulkOpen}
+        onOpenChange={(open) => {
+          setBulkOpen(open);
+        }}
+        onConfirm={handleBulkRetire}
+        loading={bulkLoading}
+        title={`Retire ${selectedBusNumbers.length} bus${selectedBusNumbers.length !== 1 ? "es" : ""}?`}
+        description="The selected buses will be marked as retired and removed from active scheduling."
+        confirmLabel="Retire"
+        selectedNames={selectedBusNumbers}
+      />
 
       <ConfirmDialog
         open={!!deleteId}

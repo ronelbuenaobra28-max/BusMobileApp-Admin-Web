@@ -23,7 +23,11 @@ import {
   ConfirmDialog,
   Skeleton,
 } from "@/components/ui";
+import { Checkbox } from "@/components/ui/checkbox";
+import { BulkActionToolbar } from "@/components/bulk-action-toolbar";
+import { BulkConfirmDialog } from "@/components/bulk-confirm-dialog";
 import { useRoutes, useCreateRoute, useUpdateRoute, useDeleteRoute, useOperators } from "@/lib/api-hooks";
+import { useBulkSelection } from "@/hooks/use-bulk-selection";
 import { toast } from "sonner";
 
 export default function RoutesPage() {
@@ -41,6 +45,8 @@ export default function RoutesPage() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState<{ name?: string; origin?: string; destination?: string }>({});
+  const [bulkLoading, setBulkLoading] = useState(false);
+  const [bulkOpen, setBulkOpen] = useState(false);
 
   const filtered = useMemo(() => {
     if (!routes) return [];
@@ -53,6 +59,8 @@ export default function RoutesPage() {
         r.destination.toLowerCase().includes(term),
     );
   }, [routes, search]);
+
+  const bulk = useBulkSelection(filtered, (r) => r.id);
 
   const openCreate = () => {
     setEditing(null);
@@ -131,6 +139,37 @@ export default function RoutesPage() {
     }
   };
 
+  const handleBulkDelete = async () => {
+    setBulkLoading(true);
+    let success = 0;
+    let failed = 0;
+
+    for (const id of bulk.selectedIds) {
+      try {
+        await deleteRoute.mutateAsync(id);
+        success++;
+      } catch {
+        failed++;
+      }
+    }
+
+    bulk.clear();
+
+    if (failed === 0) {
+      toast.success(`${success} route${success !== 1 ? "s" : ""} deleted`);
+      setBulkOpen(false);
+    } else if (success === 0) {
+      toast.error(`Failed to delete ${failed} route${failed !== 1 ? "s" : ""}`);
+    } else {
+      toast.error(`${success} deleted, ${failed} failed`);
+    }
+    setBulkLoading(false);
+  };
+
+  const selectedRouteNames = filtered
+    .filter((r) => bulk.isSelected(r.id))
+    .map((r) => r.name);
+
   return (
     <div className="space-y-4">
       <PageHeader
@@ -141,6 +180,13 @@ export default function RoutesPage() {
             <Plus className="mr-2 h-4 w-4" /> Add Route
           </Button>
         }
+      />
+
+      <BulkActionToolbar
+        selectedCount={bulk.selectedCount}
+        onBulkDelete={() => setBulkOpen(true)}
+        loading={bulkLoading}
+        label="Delete"
       />
 
       <Card>
@@ -190,6 +236,14 @@ export default function RoutesPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-100 text-left text-slate-500">
+                  <th className="px-4 py-3 w-10">
+                    <Checkbox
+                      checked={bulk.isAllSelected}
+                      indeterminate={bulk.isIndeterminate}
+                      onCheckedChange={bulk.toggleAll}
+                      aria-label="Select all routes"
+                    />
+                  </th>
                   <th className="px-4 py-3 font-medium">Name</th>
                   <th className="px-4 py-3 font-medium">Origin</th>
                   <th className="px-4 py-3 font-medium">Destination</th>
@@ -201,9 +255,24 @@ export default function RoutesPage() {
                 {filtered.map((r) => (
                   <tr
                     key={r.id}
-                    className="border-b border-slate-100 hover:bg-slate-50/50"
+                    className={`border-b border-slate-100 hover:bg-slate-50/50 ${
+                      bulk.isSelected(r.id) ? "bg-slate-50" : ""
+                    }`}
                   >
-                    <td className="px-4 py-3 font-medium text-slate-900">{r.name}</td>
+                    <td className="px-4 py-3">
+                      <Checkbox
+                        checked={bulk.isSelected(r.id)}
+                        onCheckedChange={() => bulk.toggle(r.id)}
+                        aria-label={`Select ${r.name}`}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    </td>
+                    <td
+                      className="px-4 py-3 font-medium text-slate-900 cursor-pointer"
+                      onClick={() => navigate(`/routes/${r.id}`)}
+                    >
+                      {r.name}
+                    </td>
                     <td className="px-4 py-3 text-slate-700">{r.origin}</td>
                     <td className="px-4 py-3 text-slate-700">{r.destination}</td>
                     <td className="px-4 py-3 text-slate-700">
@@ -242,6 +311,19 @@ export default function RoutesPage() {
           </div>
         )}
       </Card>
+
+      <BulkConfirmDialog
+        open={bulkOpen}
+        onOpenChange={(open) => {
+          setBulkOpen(open);
+        }}
+        onConfirm={handleBulkDelete}
+        loading={bulkLoading}
+        title={`Delete ${selectedRouteNames.length} route${selectedRouteNames.length !== 1 ? "s" : ""}?`}
+        description="The selected routes will be permanently deleted. Routes with existing trips may be rejected by the backend."
+        confirmLabel="Delete"
+        selectedNames={selectedRouteNames}
+      />
 
       <ConfirmDialog
         open={!!deleteId}
