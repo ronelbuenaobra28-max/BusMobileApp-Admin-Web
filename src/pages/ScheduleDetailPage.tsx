@@ -4,16 +4,17 @@ import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { PageHeader, Button, Card, Skeleton, Input, ConfirmDialog } from "@/components/ui";
-import { useTrips, useUpdateTrip, useCancelTrip } from "@/lib/api-hooks";
+import { useTrip, useUpdateTrip, useCancelTrip, useRoutes, useDrivers } from "@/lib/api-hooks";
 import { toast } from "sonner";
 
 export default function ScheduleDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { data: trips, isLoading } = useTrips();
+  const { data: trip, isLoading: tripLoading, error, refetch } = useTrip(id || "");
+  const { data: routes } = useRoutes();
+  const { data: drivers } = useDrivers();
   const updateTrip = useUpdateTrip();
   const cancelTrip = useCancelTrip();
-  const trip = trips?.find((t) => t.id === id);
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({
     price: "",
@@ -24,10 +25,13 @@ export default function ScheduleDetailPage() {
   const [submitting, setSubmitting] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
-  if (isLoading) {
+  const route = routes?.find((r) => r.id === trip?.route_id);
+  const driver = drivers?.find((d) => d.id === trip?.driver_id);
+
+  if (tripLoading) {
     return (
       <div className="space-y-4">
-        <Skeleton className="h-8 w-64" />
+        <PageHeader title="Trip" description="Trip details" />
         <Card>
           <Skeleton className="h-64 w-full" />
         </Card>
@@ -35,13 +39,22 @@ export default function ScheduleDetailPage() {
     );
   }
 
-  if (!trip) {
+  if (error || !trip) {
     return (
       <div className="space-y-4">
-        <PageHeader title="Trip" description="Trip details" />
+        <PageHeader title="Trip" description="Trip details" action={
+          <Button variant="outline" onClick={() => navigate(-1)}>
+            <ArrowLeft className="mr-2 h-4 w-4" /> Back
+          </Button>
+        } />
         <Card>
           <div className="p-8 text-center text-sm text-slate-500">
-            Trip not found.
+            {error ? "Failed to load trip." : "Trip not found."}
+            {error && (
+              <Button variant="ghost" size="sm" className="ml-2" onClick={() => refetch()}>
+                Retry
+              </Button>
+            )}
           </div>
         </Card>
       </div>
@@ -90,6 +103,11 @@ export default function ScheduleDetailPage() {
     }
   };
 
+  const routeLabel = route
+    ? `${route.name} (${route.origin} → ${route.destination})`
+    : trip.route_id;
+  const driverLabel = driver?.full_name ?? trip.driver_id;
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -107,15 +125,19 @@ export default function ScheduleDetailPage() {
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
               <p className="text-sm text-slate-500">Route</p>
-              <p className="text-lg font-semibold text-slate-900">{trip.route_id}</p>
+              <p className="text-lg font-semibold text-slate-900">{routeLabel}</p>
             </div>
             <div>
               <p className="text-sm text-slate-500">Bus</p>
-              <p className="text-lg font-semibold text-slate-900">{trip.bus_id}</p>
+              <p className="text-lg font-semibold text-slate-900">{trip.bus_number}</p>
             </div>
             <div>
               <p className="text-sm text-slate-500">Driver</p>
-              <p className="text-lg font-semibold text-slate-900">{trip.driver_id}</p>
+              <p className="text-lg font-semibold text-slate-900">{driverLabel}</p>
+            </div>
+            <div>
+              <p className="text-sm text-slate-500">Operator</p>
+              <p className="text-lg font-semibold text-slate-900">{trip.operator_name ?? "—"}</p>
             </div>
             <div>
               <p className="text-sm text-slate-500">Status</p>

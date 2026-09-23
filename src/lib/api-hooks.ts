@@ -220,15 +220,25 @@ export function useDeleteRoute() {
 export function useTrips(filters?: {
   status?: string;
   date?: string;
+  q?: string;
 }) {
   const qs = new URLSearchParams();
   if (filters?.status) qs.set("status", filters.status);
   if (filters?.date) qs.set("date", filters.date);
+  if (filters?.q) qs.set("q", filters.q);
   const qsStr = qs.toString();
   const path = `/api/admin/trips${qsStr ? `?${qsStr}` : ""}`;
   return useQuery({
     queryKey: ["admin", "trips", filters],
     queryFn: () => api.get<Trip[]>(path),
+  });
+}
+
+export function useTrip(tripId: string) {
+  return useQuery({
+    queryKey: ["admin", "trips", tripId],
+    queryFn: () => api.get<Trip>(`/api/admin/trips/${tripId}`),
+    enabled: !!tripId,
   });
 }
 
