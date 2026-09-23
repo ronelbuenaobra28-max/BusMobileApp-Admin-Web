@@ -50,9 +50,6 @@ export default function AdminHeader() {
           <NavLink to="/schedules" className="block rounded-md px-3 py-2 text-sm hover:bg-slate-100" onClick={() => setMobileOpen(false)}>
             Schedules
           </NavLink>
-          <NavLink to="/trips" className="block rounded-md px-3 py-2 text-sm hover:bg-slate-100" onClick={() => setMobileOpen(false)}>
-            Trips
-          </NavLink>
           <NavLink to="/notifications" className="block rounded-md px-3 py-2 text-sm hover:bg-slate-100" onClick={() => setMobileOpen(false)}>
             Notifications
           </NavLink>

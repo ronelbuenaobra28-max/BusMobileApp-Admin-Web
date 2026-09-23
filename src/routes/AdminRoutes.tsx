@@ -13,8 +13,6 @@ import RoutesPage from "@/pages/RoutesPage";
 import RouteDetailPage from "@/pages/RouteDetailPage";
 import SchedulesPage from "@/pages/SchedulesPage";
 import ScheduleDetailPage from "@/pages/ScheduleDetailPage";
-import TripsPage from "@/pages/TripsPage";
-import TripDetailPage from "@/pages/TripDetailPage";
 import NotificationsPage from "@/pages/NotificationsPage";
 import SettingsPage from "@/pages/SettingsPage";
 
@@ -66,8 +64,6 @@ function AdminRoutes() {
         <Route path="routes/:id" element={<RouteDetailPage />} />
         <Route path="schedules" element={<SchedulesPage />} />
         <Route path="schedules/:id" element={<ScheduleDetailPage />} />
-        <Route path="trips" element={<TripsPage />} />
-        <Route path="trips/:id" element={<TripDetailPage />} />
         <Route path="notifications" element={<NotificationsPage />} />
         <Route path="settings" element={<SettingsPage />} />
       </Route>

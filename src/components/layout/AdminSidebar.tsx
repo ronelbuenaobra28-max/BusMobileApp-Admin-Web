@@ -7,7 +7,6 @@ import {
   UserCog,
   Route,
   CalendarDays,
-  Map,
   Bell,
   Settings,
   LogOut,
@@ -21,7 +20,6 @@ const nav = [
   { to: "/drivers", icon: UserCog, label: "Drivers" },
   { to: "/routes", icon: Route, label: "Routes" },
   { to: "/schedules", icon: CalendarDays, label: "Schedules" },
-  { to: "/trips", icon: Map, label: "Trips" },
   { to: "/notifications", icon: Bell, label: "Notifications" },
   { to: "/settings", icon: Settings, label: "Settings" },
 ];
