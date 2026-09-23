@@ -25,7 +25,9 @@ export default function AdminHeader() {
         </button>
         <div className="hidden text-right md:block">
           <p className="text-sm font-medium text-slate-900">
-            {profile?.first_name || profile?.email || "Admin"}
+            {profile?.first_name && profile?.last_name
+              ? `${profile.first_name} ${profile.last_name}`
+              : profile?.first_name || profile?.email || "Admin"}
           </p>
           <p className="text-xs text-slate-500 capitalize">{profile?.role ?? "admin"}</p>
         </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   Ticket,
   DollarSign,
@@ -111,12 +112,28 @@ type ChartDataPoint = {
 
 export default function DashboardPage() {
   const [selectedYear, setSelectedYear] = useState<number>(CURRENT_YEAR);
-  const { data: stats, isLoading: statsLoading, error: statsError, refetch: refetchStats } = useDashboardStats();
+  const { data: stats, isLoading: statsLoading, error: statsError } = useDashboardStats();
   const { data: reservations, isLoading: reservationsLoading, error: reservationsError } = useAnalyticsReservations(selectedYear);
   const { data: revenue, isLoading: revenueLoading, error: revenueError } = useAnalyticsRevenue(selectedYear);
   const { data: bookingStatus, isLoading: bookingStatusLoading } = useAnalyticsBookingStatus();
   const { data: fleet, isLoading: fleetLoading } = useAnalyticsFleet();
   const { data: activeTrips, isLoading: tripsLoading } = useTrips({ status: "active" });
+  const queryClient = useQueryClient();
+
+  const handleRefresh = async () => {
+    await queryClient.invalidateQueries({
+      queryKey: ["dashboard", "stats"],
+      exact: false,
+    });
+    await queryClient.invalidateQueries({
+      queryKey: ["analytics"],
+      exact: false,
+    });
+    await queryClient.invalidateQueries({
+      queryKey: ["admin", "trips"],
+      exact: false,
+    });
+  };
 
   const hasAnyError = statsError || reservationsError || revenueError;
 
@@ -189,9 +206,7 @@ export default function DashboardPage() {
             variant="outline"
             size="sm"
             className="h-9"
-            onClick={() => {
-              refetchStats();
-            }}
+            onClick={handleRefresh}
           >
             <RefreshCw className="mr-2 h-3.5 w-3.5" />
             Refresh
@@ -207,7 +222,7 @@ export default function DashboardPage() {
             revenueError?.message ||
             "Please try again."
           }
-          onRetry={refetchStats}
+          onRetry={handleRefresh}
         />
       )}
 
