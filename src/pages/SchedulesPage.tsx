@@ -51,6 +51,7 @@ export default function SchedulesPage() {
   const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState({
     route_id: "",
+    operator_id: "",
     bus_id: "",
     driver_id: "",
     scheduled_departure: "",
@@ -60,6 +61,7 @@ export default function SchedulesPage() {
   });
   const [errors, setErrors] = useState<{
     route_id?: string;
+    operator_id?: string;
     bus_id?: string;
     driver_id?: string;
     scheduled_departure?: string;
@@ -69,9 +71,17 @@ export default function SchedulesPage() {
 
   const tripsToRender = trips ?? [];
 
+  const selectedRoute = routes?.find((r) => r.id === form.route_id);
+  const assignedOperators = selectedRoute?.operators ?? [];
+  const selectedOperator = assignedOperators.find((op) => op.operator_id === form.operator_id);
+  const operatorBuses = buses?.filter((b) => b.operator_id === form.operator_id) ?? [];
+  const selectedBus = buses?.find((b) => b.id === form.bus_id);
+  const selectedDriver = drivers?.find((d) => d.id === form.driver_id);
+
   const validate = (): boolean => {
     const next: typeof errors = {};
     if (!form.route_id) next.route_id = "Select a route.";
+    if (!form.operator_id) next.operator_id = "Select an operator.";
     if (!form.bus_id) next.bus_id = "Select a bus.";
     if (!form.driver_id) next.driver_id = "Select a driver.";
     if (!form.scheduled_departure) next.scheduled_departure = "Set a departure date/time.";
@@ -84,6 +94,7 @@ export default function SchedulesPage() {
   const openCreate = () => {
     setForm({
       route_id: "",
+      operator_id: "",
       bus_id: "",
       driver_id: "",
       scheduled_departure: "",
@@ -112,6 +123,7 @@ export default function SchedulesPage() {
       setDialogOpen(false);
       setForm({
         route_id: "",
+        operator_id: "",
         bus_id: "",
         driver_id: "",
         scheduled_departure: "",
@@ -138,12 +150,19 @@ export default function SchedulesPage() {
     }
   };
 
-  const selectedRoute = routes?.find((r) => r.id === form.route_id);
-  const selectedBus = buses?.find((b) => b.id === form.bus_id);
-  const selectedDriver = drivers?.find((d) => d.id === form.driver_id);
+  const handleRouteChange = (routeId: string) => {
+    setForm((f) => ({ ...f, route_id: routeId, operator_id: "", bus_id: "" }));
+    setErrors((prev) => ({ ...prev, route_id: undefined, operator_id: undefined, bus_id: undefined }));
+  };
+
+  const handleOperatorChange = (operatorId: string) => {
+    setForm((f) => ({ ...f, operator_id: operatorId, bus_id: "" }));
+    setErrors((prev) => ({ ...prev, operator_id: undefined, bus_id: undefined }));
+  };
 
   const canSubmit =
     form.route_id &&
+    form.operator_id &&
     form.bus_id &&
     form.driver_id &&
     form.scheduled_departure &&
@@ -167,12 +186,12 @@ export default function SchedulesPage() {
         <div className="p-4 flex flex-wrap gap-3">
           <div className="relative flex-1 min-w-[200px]">
             <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-              <Input
-                placeholder="Search route, bus, driver, or operator..."
-                className="pl-9"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
+            <Input
+              placeholder="Search route, bus, driver, or operator..."
+              className="pl-9"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
           </div>
           <select
             className="h-9 rounded-md border border-slate-200 bg-white px-3 text-sm"
@@ -300,7 +319,7 @@ export default function SchedulesPage() {
               <Label htmlFor="route_id">Route</Label>
               <Select
                 value={form.route_id}
-                onValueChange={(value) => setForm((f) => ({ ...f, route_id: value }))}
+                onValueChange={handleRouteChange}
               >
                 <SelectTrigger id="route_id">
                   <SelectValue placeholder={selectedRoute ? `${selectedRoute.name} (${selectedRoute.origin} → ${selectedRoute.destination})` : "Select route"} />
@@ -317,22 +336,64 @@ export default function SchedulesPage() {
             </div>
 
             <div className="space-y-1">
+              <Label htmlFor="operator_id">Operator</Label>
+              <Select
+                value={form.operator_id}
+                onValueChange={handleOperatorChange}
+                disabled={!form.route_id}
+              >
+                <SelectTrigger id="operator_id">
+                  <SelectValue placeholder={selectedOperator ? selectedOperator.operator_name : "Select operator"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {assignedOperators.length === 0 && form.route_id ? (
+                    <div className="px-3 py-2 text-sm text-slate-500">No operators assigned to this route.</div>
+                  ) : (
+                    assignedOperators.map((op) => (
+                      <SelectItem key={op.operator_id} value={op.operator_id}>
+                        {op.operator_name}
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+              {!form.route_id && (
+                <p className="text-xs text-slate-500">Select a route first.</p>
+              )}
+              {form.route_id && assignedOperators.length === 0 && (
+                <p className="text-xs text-red-600">No operators are assigned to this route.</p>
+              )}
+              {errors.operator_id && <p className="text-xs text-red-600">{errors.operator_id}</p>}
+            </div>
+
+            <div className="space-y-1">
               <Label htmlFor="bus_id">Bus</Label>
               <Select
                 value={form.bus_id}
                 onValueChange={(value) => setForm((f) => ({ ...f, bus_id: value }))}
+                disabled={!form.operator_id}
               >
                 <SelectTrigger id="bus_id">
                   <SelectValue placeholder={selectedBus ? `${selectedBus.bus_number} (cap. ${selectedBus.capacity})` : "Select bus"} />
                 </SelectTrigger>
                 <SelectContent>
-                  {buses?.map((b) => (
-                    <SelectItem key={b.id} value={b.id}>
-                      {b.bus_number} (cap. {b.capacity})
-                    </SelectItem>
-                  ))}
+                  {operatorBuses.length === 0 && form.operator_id ? (
+                    <div className="px-3 py-2 text-sm text-slate-500">No buses available for this operator.</div>
+                  ) : (
+                    operatorBuses.map((b) => (
+                      <SelectItem key={b.id} value={b.id}>
+                        {b.bus_number} (cap. {b.capacity})
+                      </SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
+              {!form.operator_id && form.route_id && (
+                <p className="text-xs text-slate-500">Select an operator first.</p>
+              )}
+              {form.operator_id && operatorBuses.length === 0 && (
+                <p className="text-xs text-red-600">No buses available for this operator.</p>
+              )}
               {errors.bus_id && <p className="text-xs text-red-600">{errors.bus_id}</p>}
             </div>
 
@@ -341,6 +402,7 @@ export default function SchedulesPage() {
               <Select
                 value={form.driver_id}
                 onValueChange={(value) => setForm((f) => ({ ...f, driver_id: value }))}
+                disabled={!form.bus_id}
               >
                 <SelectTrigger id="driver_id">
                   <SelectValue placeholder={selectedDriver ? selectedDriver.full_name : "Select driver"} />
