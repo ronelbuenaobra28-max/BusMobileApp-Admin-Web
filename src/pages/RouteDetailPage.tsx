@@ -1,15 +1,18 @@
 "use client";
 
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, RefreshCw } from "lucide-react";
 import { PageHeader, Button, Card, Skeleton } from "@/components/ui";
-import { useRoutes, useTrips } from "@/lib/api-hooks";
+import { useRoutes, useTrips, useRouteGeometry } from "@/lib/api-hooks";
+import { RouteMap } from "@/components/map/RouteMap";
+import type { Stop } from "@/types";
 
 export default function RouteDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { data: routes, isLoading: loadingRoutes } = useRoutes();
   const { data: trips } = useTrips();
+  const { data: geometry, refetch: refetchGeometry } = useRouteGeometry(id || '');
 
   const route = routes?.find((r) => r.id === id);
   const routeTrips = trips?.filter((t) => t.route_id === id) ?? [];
@@ -38,6 +41,11 @@ export default function RouteDetailPage() {
     );
   }
 
+  const stops = geometry?.stops?.map((s: Stop) => ({
+    ...s,
+    point_type: s.point_type ?? 'passenger_stop',
+  })) ?? [];
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -48,9 +56,19 @@ export default function RouteDetailPage() {
           </span>
         }
         action={
-          <Button variant="outline" onClick={() => navigate(-1)}>
-            <ArrowLeft className="mr-2 h-4 w-4" /> Back
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => refetchGeometry()}
+              disabled={!id}
+            >
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Refresh road route
+            </Button>
+            <Button variant="outline" onClick={() => navigate(-1)}>
+              <ArrowLeft className="mr-2 h-4 w-4" /> Back
+            </Button>
+          </div>
         }
       />
 
@@ -59,12 +77,18 @@ export default function RouteDetailPage() {
           <div className="p-6">
             <p className="text-sm text-slate-500">Origin</p>
             <p className="text-lg font-semibold text-slate-900">{route.origin}</p>
+            {route.origin_terminal_name && (
+              <p className="text-sm text-slate-500">{route.origin_terminal_name} {route.origin_terminal_city ? `(${route.origin_terminal_city})` : ''}</p>
+            )}
           </div>
         </Card>
         <Card>
           <div className="p-6">
             <p className="text-sm text-slate-500">Destination</p>
             <p className="text-lg font-semibold text-slate-900">{route.destination}</p>
+            {route.destination_terminal_name && (
+              <p className="text-sm text-slate-500">{route.destination_terminal_name} {route.destination_terminal_city ? `(${route.destination_terminal_city})` : ''}</p>
+            )}
           </div>
         </Card>
         <Card>
@@ -73,9 +97,23 @@ export default function RouteDetailPage() {
             <p className="text-lg font-semibold text-slate-900">
               {route.distance_km !== null && route.distance_km !== undefined ? `${route.distance_km.toFixed(1)} km` : "—"}
             </p>
+            {geometry?.distance_km != null && (
+              <p className="text-sm text-slate-500">Geometry: {geometry.distance_km.toFixed(1)} km ({geometry.coordinates?.length ?? 0} points)</p>
+            )}
           </div>
         </Card>
       </div>
+
+      <Card>
+        <div className="p-6">
+          <h3 className="mb-4 text-lg font-semibold text-slate-900">Route Map</h3>
+          <RouteMap
+            stops={stops}
+            routeGeometry={geometry ?? undefined}
+            readOnly
+          />
+        </div>
+      </Card>
 
       <Card>
         <div className="p-6">

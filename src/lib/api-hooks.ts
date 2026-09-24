@@ -17,6 +17,8 @@ import type {
   AdminSettings,
   SettingOut,
   User,
+  RouteGeometry,
+  RefreshRouteGeometryResponse,
 } from "@/types";
 
 export function useDashboardStats() {
@@ -181,7 +183,7 @@ export function useRoutes() {
 export function useCreateRoute() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (body: { name: string; origin: string; destination: string; operator_ids?: string[] }) =>
+    mutationFn: (body: { name: string; origin: string; destination: string; origin_terminal_id?: string | null; destination_terminal_id?: string | null; operator_ids?: string[] }) =>
       api.post<Route>("/api/admin/routes", body),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin", "routes"] });
@@ -198,7 +200,7 @@ export function useUpdateRoute() {
       body,
     }: {
       id: string;
-      body: Partial<{ name: string; origin: string; destination: string; operator_ids: string[] }>;
+      body: Partial<{ name: string; origin: string; destination: string; origin_terminal_id: string | null; destination_terminal_id: string | null; operator_ids: string[] }>;
     }) => api.put<Route>(`/api/admin/routes/${id}`, body),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin", "routes"] });
@@ -215,6 +217,26 @@ export function useDeleteRoute() {
       qc.invalidateQueries({ queryKey: ["admin", "routes"] });
       qc.invalidateQueries({ queryKey: ["dashboard", "stats"] });
     },
+  });
+}
+
+export function useRefreshRouteGeometry() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (routeId: string) =>
+      api.post<RefreshRouteGeometryResponse>(`/api/admin/routes/${routeId}/refresh-geometry`, {}),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin", "routes"] });
+      qc.invalidateQueries({ queryKey: ["admin", "route-geometry"] });
+    },
+  });
+}
+
+export function useRouteGeometry(routeId: string) {
+  return useQuery({
+    queryKey: ["admin", "route-geometry", routeId],
+    queryFn: () => api.get<RouteGeometry>(`/api/admin/routes/${routeId}/geometry`),
+    enabled: !!routeId,
   });
 }
 

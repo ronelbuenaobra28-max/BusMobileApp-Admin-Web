@@ -26,16 +26,18 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { BulkActionToolbar } from "@/components/bulk-action-toolbar";
 import { BulkConfirmDialog } from "@/components/bulk-confirm-dialog";
-import { useRoutes, useCreateRoute, useUpdateRoute, useDeleteRoute, useOperators } from "@/lib/api-hooks";
+import { useRoutes, useCreateRoute, useUpdateRoute, useDeleteRoute, useOperators, useTerminals, useRefreshRouteGeometry } from "@/lib/api-hooks";
 import { useBulkSelection } from "@/hooks/use-bulk-selection";
 import { toast } from "sonner";
 
 export default function RoutesPage() {
   const { data: routes, isLoading, error, refetch } = useRoutes();
   const { data: operators } = useOperators();
+  const { data: terminals } = useTerminals();
   const createRoute = useCreateRoute();
   const updateRoute = useUpdateRoute();
   const deleteRoute = useDeleteRoute();
+  const refreshGeometry = useRefreshRouteGeometry();
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -47,6 +49,11 @@ export default function RoutesPage() {
   const [errors, setErrors] = useState<{ name?: string; origin?: string; destination?: string }>({});
   const [bulkLoading, setBulkLoading] = useState(false);
   const [bulkOpen, setBulkOpen] = useState(false);
+  const [terminalDialogOpen, setTerminalDialogOpen] = useState(false);
+  const [editingTerminals, setEditingTerminals] = useState<{ id: string; name: string } | null>(null);
+  const [selectedOriginTerminalId, setSelectedOriginTerminalId] = useState<string>("");
+  const [selectedDestinationTerminalId, setSelectedDestinationTerminalId] = useState<string>("");
+  const [terminalSaving, setTerminalSaving] = useState(false);
 
   const filtered = useMemo(() => {
     if (!routes) return [];
@@ -247,6 +254,7 @@ export default function RoutesPage() {
                   <th className="px-4 py-3 font-medium">Name</th>
                   <th className="px-4 py-3 font-medium">Origin</th>
                   <th className="px-4 py-3 font-medium">Destination</th>
+                  <th className="px-4 py-3 font-medium">Terminals</th>
                   <th className="px-4 py-3 font-medium">Operators</th>
                   <th className="px-4 py-3 font-medium text-right">Actions</th>
                 </tr>
@@ -272,37 +280,74 @@ export default function RoutesPage() {
                     >
                       {r.name}
                     </td>
-                    <td className="px-4 py-3 text-slate-700">{r.origin}</td>
-                    <td className="px-4 py-3 text-slate-700">{r.destination}</td>
-                    <td className="px-4 py-3 text-slate-700">
-                      {r.operators?.length > 0
-                        ? r.operators.map((op) => op.operator_name).join(", ")
-                        : "—"}
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => navigate(`/routes/${r.id}`)}>
-                            View details
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => openEdit(r)}>
-                            Edit
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            className="text-red-600"
-                            onClick={() => setDeleteId(r.id)}
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </td>
+                     <td className="px-4 py-3 text-slate-700">{r.origin}</td>
+                     <td className="px-4 py-3 text-slate-700">{r.destination}</td>
+                     <td className="px-4 py-3 text-slate-700">
+                       {r.origin_terminal_name || r.destination_terminal_name ? (
+                         <div className="flex flex-col gap-0.5">
+                           <span>{r.origin_terminal_name || 'Origin: Missing'}</span>
+                           <span className="text-xs text-slate-400">↓</span>
+                           <span>{r.destination_terminal_name || 'Destination: Missing'}</span>
+                         </div>
+                       ) : (
+                         <span className="text-slate-400">Not configured</span>
+                       )}
+                     </td>
+                     <td className="px-4 py-3 text-slate-700">
+                       {r.operators?.length > 0
+                         ? r.operators.map((op) => op.operator_name).join(", ")
+                         : "—"}
+                     </td>
+                     <td className="px-4 py-3 text-right">
+                       <DropdownMenu>
+                         <DropdownMenuTrigger asChild>
+                           <Button variant="ghost" size="icon" className="h-8 w-8">
+                             <MoreVertical className="h-4 w-4" />
+                           </Button>
+                         </DropdownMenuTrigger>
+                         <DropdownMenuContent align="end">
+                           <DropdownMenuItem onClick={() => navigate(`/routes/${r.id}`)}>
+                             View details
+                           </DropdownMenuItem>
+                           <DropdownMenuItem onClick={() => openEdit(r)}>
+                             Edit
+                           </DropdownMenuItem>
+                           <DropdownMenuItem
+                             onClick={() => {
+                               setEditingTerminals(r);
+                               setSelectedOriginTerminalId(r.origin_terminal_id || "");
+                               setSelectedDestinationTerminalId(r.destination_terminal_id || "");
+                               setTerminalDialogOpen(true);
+                             }}
+                           >
+                             {r.origin_terminal_id && r.destination_terminal_id ? 'Configure terminals' : 'Set terminals'}
+                           </DropdownMenuItem>
+                           <DropdownMenuItem
+                             onClick={() => {
+                               setEditingTerminals(r);
+                               refreshGeometry.mutate(r.id, {
+                                 onSuccess: () => {
+                                   toast.success('Road route refreshed successfully.');
+                                   refetch();
+                                 },
+                                 onError: () => {
+                                   toast.error('Unable to generate road route. Please verify the terminal coordinates and try again.');
+                                 },
+                               });
+                             }}
+                           >
+                             Refresh road route
+                           </DropdownMenuItem>
+                           <DropdownMenuItem
+                             className="text-red-600"
+                             onClick={() => setDeleteId(r.id)}
+                           >
+                             <Trash2 className="mr-2 h-4 w-4" />
+                             Delete
+                           </DropdownMenuItem>
+                         </DropdownMenuContent>
+                       </DropdownMenu>
+                     </td>
                   </tr>
                 ))}
               </tbody>
@@ -323,6 +368,88 @@ export default function RoutesPage() {
         confirmLabel="Delete"
         selectedNames={selectedRouteNames}
       />
+
+      <Dialog open={terminalDialogOpen} onOpenChange={(open) => { if (!open) { setTerminalDialogOpen(false); setEditingTerminals(null); } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Configure Terminals</DialogTitle>
+            <DialogDescription>
+              Set the origin and destination terminals for this route. Saving will also attempt to generate the road route.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-1">
+              <Label>Origin Terminal</Label>
+              <select
+                value={selectedOriginTerminalId}
+                onChange={(e) => setSelectedOriginTerminalId(e.target.value)}
+                className="w-full rounded-md border border-slate-200 p-2"
+              >
+                <option value="">Select origin terminal</option>
+                {terminals?.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name} {t.city ? `(${t.city})` : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-1">
+              <Label>Destination Terminal</Label>
+              <select
+                value={selectedDestinationTerminalId}
+                onChange={(e) => setSelectedDestinationTerminalId(e.target.value)}
+                className="w-full rounded-md border border-slate-200 p-2"
+              >
+                <option value="">Select destination terminal</option>
+                {terminals?.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name} {t.city ? `(${t.city})` : ''}
+                  </option>
+                ))}
+              </select>
+              {selectedOriginTerminalId === selectedDestinationTerminalId && selectedOriginTerminalId !== "" && (
+                <p className="text-xs text-red-600">Origin and destination must be different terminals.</p>
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setTerminalDialogOpen(false)} disabled={terminalSaving}>
+              Cancel
+            </Button>
+            <Button
+              onClick={async () => {
+                if (!editingTerminals) return;
+                if (selectedOriginTerminalId === selectedDestinationTerminalId && selectedOriginTerminalId !== "") return;
+                setTerminalSaving(true);
+                try {
+                  await updateRoute.mutateAsync({
+                    id: editingTerminals.id,
+                    body: {
+                      origin_terminal_id: selectedOriginTerminalId || null,
+                      destination_terminal_id: selectedDestinationTerminalId || null,
+                    },
+                  });
+                  const result = await refreshGeometry.mutateAsync(editingTerminals.id);
+                  toast.success(
+                    `Road route generated successfully. Distance: ${result.distance_km?.toFixed(1) ?? '—'} km, ` +
+                    `Coordinates: ${result.coordinate_count}, Stops: ${result.stop_count}`
+                  );
+                  setTerminalDialogOpen(false);
+                  setEditingTerminals(null);
+                  refetch();
+                } catch {
+                  toast.error('Unable to generate road route. Please verify the terminal coordinates and try again.');
+                } finally {
+                  setTerminalSaving(false);
+                }
+              }}
+              disabled={terminalSaving || (selectedOriginTerminalId === selectedDestinationTerminalId && selectedOriginTerminalId !== "")}
+            >
+              {terminalSaving ? 'Generating...' : 'Save & Generate Road Route'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <ConfirmDialog
         open={!!deleteId}

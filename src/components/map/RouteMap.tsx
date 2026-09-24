@@ -146,16 +146,18 @@ function RouteMap({
       console.log("[RouteMap] WebGL context:", gl ? "available" : "NOT available");
       map.addSource("route-line", {
         type: "geojson",
-        data: currentRouteGeometry?.coordinates && currentRouteGeometry.coordinates.length >= 2
-          ? {
-              type: "Feature",
-              properties: {},
-              geometry: {
-                type: "LineString",
-                coordinates: currentRouteGeometry.coordinates,
-              },
-            }
-          : { type: "FeatureCollection", features: [] },
+        data: { type: "FeatureCollection", features: [] },
+      });
+
+      map.addLayer({
+        id: "route-line-layer",
+        type: "line",
+        source: "route-line",
+        paint: {
+          "line-color": "#2563eb",
+          "line-width": 4,
+          "line-opacity": 0.7,
+        },
       });
 
       map.addSource("saved-stops", {
@@ -191,19 +193,6 @@ function RouteMap({
             }
           : { type: "FeatureCollection", features: [] },
       });
-
-      if (currentRouteGeometry?.coordinates && currentRouteGeometry.coordinates.length >= 2) {
-        map.addLayer({
-          id: "route-line-layer",
-          type: "line",
-          source: "route-line",
-          paint: {
-            "line-color": "#2563eb",
-            "line-width": 4,
-            "line-opacity": 0.7,
-          },
-        });
-      }
 
       map.addLayer({
         id: "saved-stops-points",

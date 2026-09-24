@@ -79,6 +79,16 @@ export interface Route {
   destination: string;
   distance_km: number | null;
   operators: OperatorAssignment[];
+  origin_terminal_id: string | null;
+  origin_terminal_name: string | null;
+  origin_terminal_city: string | null;
+  origin_terminal_lat: number | null;
+  origin_terminal_lng: number | null;
+  destination_terminal_id: string | null;
+  destination_terminal_name: string | null;
+  destination_terminal_city: string | null;
+  destination_terminal_lat: number | null;
+  destination_terminal_lng: number | null;
 }
 
 export interface OperatorAssignment {
@@ -114,6 +124,15 @@ export interface RouteGeometry {
   stops: Stop[];
 }
 
+export interface RefreshRouteGeometryResponse {
+  route_id: string;
+  distance_km: number | null;
+  coordinate_count: number;
+  stops_generated: number;
+  stop_count: number;
+  stop_generation_warning: string | null;
+}
+
 export interface Trip {
   id: string;
   route_id: string;
@@ -133,7 +152,10 @@ export interface Trip {
 export interface Terminal {
   id: string;
   name: string;
-  location?: string;
+  address?: string;
+  city?: string;
+  lat?: number;
+  lng?: number;
 }
 
 export interface AdminNotificationTestResponse {

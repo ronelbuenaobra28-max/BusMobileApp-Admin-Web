@@ -123,4 +123,16 @@ describe("RouteMap saved markers", () => {
       />,
     );
   });
+
+  it("renders without crashing when route geometry is initially null", () => {
+    renderMap(
+      <RouteMap
+        stops={mockStops}
+        routeGeometry={null}
+        readOnly={false}
+        onAddStop={() => {}}
+        onEditStop={() => {}}
+      />,
+    );
+  });
 });
