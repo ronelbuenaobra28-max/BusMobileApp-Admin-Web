@@ -134,7 +134,7 @@ export function useDrivers() {
 export function useCreateDriver() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (body: { name: string; license_no: string }) =>
+    mutationFn: (body: { user_id: string; license_no: string }) =>
       api.post<Driver>("/api/admin/drivers", body),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin", "drivers"] });

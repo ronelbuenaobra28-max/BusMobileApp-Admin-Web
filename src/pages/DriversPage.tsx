@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Plus, Search, MoreVertical, Trash2 } from "lucide-react";
 import {
@@ -31,20 +31,22 @@ import {
   useCreateDriver,
   useUpdateDriver,
   useRemoveDriver,
+  useUsers,
 } from "@/lib/api-hooks";
 import { useBulkSelection } from "@/hooks/use-bulk-selection";
 import { toast } from "sonner";
 
 export default function DriversPage() {
   const { data: drivers, isLoading, error } = useDrivers();
+  const { data: users } = useUsers();
   const createDriver = useCreateDriver();
   const updateDriver = useUpdateDriver();
   const removeDriver = useRemoveDriver();
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editing, setEditing] = useState<{ id: string; name: string; license_no: string; status: string } | null>(null);
-  const [form, setForm] = useState({ name: "", license_no: "", status: "available" });
+  const [editing, setEditing] = useState<{ id: string; license_no: string; status: string } | null>(null);
+  const [form, setForm] = useState({ user_id: "", license_no: "", status: "available" });
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [bulkLoading, setBulkLoading] = useState(false);
@@ -56,39 +58,47 @@ export default function DriversPage() {
 
   const bulk = useBulkSelection(filtered ?? [], (d) => d.id);
 
+  const eligibleUsers = useMemo(() => {
+    if (!users) return [];
+    const driverIds = new Set((drivers ?? []).map((d) => d.user_id));
+    return users.filter((u) => u.role === "driver" && !driverIds.has(u.id));
+  }, [users, drivers]);
+
   const openCreate = () => {
     setEditing(null);
-    setForm({ name: "", license_no: "", status: "available" });
+    setForm({ user_id: "", license_no: "", status: "available" });
     setDialogOpen(true);
   };
 
-  const openEdit = (d: { id: string; full_name: string; license_no: string; status: string }) => {
-    setEditing({ id: d.id, name: d.full_name, license_no: d.license_no, status: d.status });
-    setForm({ name: d.full_name, license_no: d.license_no, status: d.status });
+  const openEdit = (d: { id: string; license_no: string; status: string }) => {
+    setEditing({ id: d.id, license_no: d.license_no, status: d.status });
+    setForm({ user_id: "", license_no: d.license_no, status: d.status });
     setDialogOpen(true);
   };
 
   const doSave = async () => {
-    if (!form.name.trim() || !form.license_no.trim()) return;
+    if (!editing && !form.user_id) return;
+    if (!form.license_no.trim()) return;
     setSubmitting(true);
     try {
       if (editing) {
         await updateDriver.mutateAsync({
           id: editing.id,
-          body: { name: form.name, license_no: form.license_no, status: form.status },
+          body: { license_no: form.license_no, status: form.status },
         });
         toast.success("Driver updated");
       } else {
         await createDriver.mutateAsync({
-          name: form.name,
+          user_id: form.user_id,
           license_no: form.license_no,
         });
         toast.success("Driver created");
       }
       setDialogOpen(false);
       setEditing(null);
-    } catch {
-      toast.error("Failed to save driver");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to save driver";
+      toast.error(message);
     } finally {
       setSubmitting(false);
     }
@@ -235,7 +245,7 @@ export default function DriversPage() {
                     <td className="px-4 py-3 text-slate-700">{d.license_no}</td>
                     <td className="px-4 py-3">
                       <span className={`inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-medium ${
-                        d.status === "active" ? "border-transparent bg-emerald-100 text-emerald-700" : "border-transparent bg-slate-100 text-slate-700"
+                        d.status === "available" ? "border-transparent bg-emerald-100 text-emerald-700" : "border-transparent bg-slate-100 text-slate-700"
                       }`}>
                         {d.status}
                       </span>
@@ -301,18 +311,30 @@ export default function DriversPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{editing ? "Edit Driver" : "Add Driver"}</DialogTitle>
-            <DialogDescription>{editing ? "Update driver details below." : "Enter driver details below."}</DialogDescription>
+            <DialogDescription>{editing ? "Update driver details below." : "Select a user account and enter the driver's license number."}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="space-y-1">
-              <Label htmlFor="name">Name</Label>
-              <Input
-                id="name"
-                value={form.name}
-                onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                placeholder="e.g. Juan Dela Cruz"
-              />
-            </div>
+            {!editing && (
+              <div className="space-y-1">
+                <Label htmlFor="user_id">User Account</Label>
+                <select
+                  id="user_id"
+                  className="flex h-9 w-full rounded-md border border-slate-200 bg-white px-3 py-1 text-sm"
+                  value={form.user_id}
+                  onChange={(e) => setForm((f) => ({ ...f, user_id: e.target.value }))}
+                >
+                  <option value="">Select a driver account...</option>
+                  {eligibleUsers.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.first_name} {u.last_name} — {u.email}
+                    </option>
+                  ))}
+                </select>
+                {eligibleUsers.length === 0 && (
+                  <p className="text-xs text-slate-500">No eligible driver accounts available.</p>
+                )}
+              </div>
+            )}
 
             <div className="space-y-1">
               <Label htmlFor="license_no">License No</Label>
