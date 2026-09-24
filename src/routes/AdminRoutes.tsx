@@ -9,6 +9,8 @@ import BusesPage from "@/pages/BusesPage";
 import BusDetailPage from "@/pages/BusDetailPage";
 import DriversPage from "@/pages/DriversPage";
 import DriverDetailPage from "@/pages/DriverDetailPage";
+import UsersPage from "@/pages/UsersPage";
+import UserDetailPage from "@/pages/UserDetailPage";
 import RoutesPage from "@/pages/RoutesPage";
 import RouteDetailPage from "@/pages/RouteDetailPage";
 import SchedulesPage from "@/pages/SchedulesPage";
@@ -60,6 +62,8 @@ function AdminRoutes() {
         <Route path="buses/:id" element={<BusDetailPage />} />
         <Route path="drivers" element={<DriversPage />} />
         <Route path="drivers/:id" element={<DriverDetailPage />} />
+        <Route path="users" element={<UsersPage />} />
+        <Route path="users/:id" element={<UserDetailPage />} />
         <Route path="routes" element={<RoutesPage />} />
         <Route path="routes/:id" element={<RouteDetailPage />} />
         <Route path="schedules" element={<SchedulesPage />} />

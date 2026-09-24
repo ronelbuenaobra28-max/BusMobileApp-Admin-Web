@@ -16,6 +16,7 @@ import type {
   AnalyticsFleet,
   AdminSettings,
   SettingOut,
+  User,
 } from "@/types";
 
 export function useDashboardStats() {
@@ -398,5 +399,25 @@ export function useUpdateSetting() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin", "settings"] });
     },
+  });
+}
+
+export function useUsers(filters?: { q?: string; role?: string }) {
+  const qs = new URLSearchParams();
+  if (filters?.q) qs.set("q", filters.q);
+  if (filters?.role) qs.set("role", filters.role);
+  const qsStr = qs.toString();
+  const path = `/api/admin/users${qsStr ? `?${qsStr}` : ""}`;
+  return useQuery({
+    queryKey: ["admin", "users", filters],
+    queryFn: () => api.get<User[]>(path),
+  });
+}
+
+export function useUser(userId: string) {
+  return useQuery({
+    queryKey: ["admin", "users", userId],
+    queryFn: () => api.get<User>(`/api/admin/users/${userId}`),
+    enabled: !!userId,
   });
 }

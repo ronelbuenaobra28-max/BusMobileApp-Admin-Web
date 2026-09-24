@@ -153,6 +153,23 @@ export type TripStatus = "scheduled" | "active" | "completed" | "cancelled";
 export type BusStatus = "active" | "maintenance" | "retired";
 export type PointType = "origin" | "checkpoint" | "passenger_stop" | "destination";
 
+export interface User {
+  id: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  contact_number: string | null;
+  role: string;
+  birthdate: string | null;
+  gender: string | null;
+  verification_id_type: string | null;
+  verification_status: string | null;
+  consent_given: boolean;
+  terms_version: string | null;
+  privacy_policy_version: string | null;
+  created_at: string;
+}
+
 export interface AdminSettings {
   booking_hold_minutes: number;
   reminder_window_hours: number;

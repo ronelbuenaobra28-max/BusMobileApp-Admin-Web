@@ -46,6 +46,9 @@ export default function AdminHeader() {
           <NavLink to="/drivers" className="block rounded-md px-3 py-2 text-sm hover:bg-slate-100" onClick={() => setMobileOpen(false)}>
             Drivers
           </NavLink>
+          <NavLink to="/users" className="block rounded-md px-3 py-2 text-sm hover:bg-slate-100" onClick={() => setMobileOpen(false)}>
+            Users
+          </NavLink>
           <NavLink to="/routes" className="block rounded-md px-3 py-2 text-sm hover:bg-slate-100" onClick={() => setMobileOpen(false)}>
             Routes
           </NavLink>
