@@ -166,7 +166,55 @@ export function useRetireBus() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) =>
-      api.del<{ success: boolean }>(`/api/admin/buses/${id}`),
+      api.post<Bus>(`/api/admin/buses/${id}/retire`, {}),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin", "buses"] });
+      qc.invalidateQueries({ queryKey: ["dashboard", "stats"] });
+    },
+  });
+}
+
+export function useDeleteBus() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) =>
+      api.del<void>(`/api/admin/buses/${id}`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin", "buses"] });
+      qc.invalidateQueries({ queryKey: ["dashboard", "stats"] });
+    },
+  });
+}
+
+export function useBulkRetireBuses() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (ids: string[]) =>
+      api.post<{
+        retired_ids: string[];
+        already_retired_ids: string[];
+        not_found: string[];
+        retired_count: number;
+      }>("/api/admin/buses/bulk-retire", { bus_ids: ids }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin", "buses"] });
+      qc.invalidateQueries({ queryKey: ["dashboard", "stats"] });
+    },
+  });
+}
+
+export function useBulkDeleteBuses() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (ids: string[]) =>
+      api.post<{
+        deleted_ids: string[];
+        blocked: { id: string; reason: string }[];
+        not_found: string[];
+        deleted_count: number;
+        blocked_count: number;
+        not_found_count: number;
+      }>("/api/admin/buses/bulk-delete", { bus_ids: ids }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin", "buses"] });
       qc.invalidateQueries({ queryKey: ["dashboard", "stats"] });

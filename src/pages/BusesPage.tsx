@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Search, MoreVertical, PowerOff } from "lucide-react";
+import { Plus, Search, MoreVertical, PowerOff, Trash2 } from "lucide-react";
 import {
   PageHeader,
   Button,
@@ -31,7 +31,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { BulkActionToolbar } from "@/components/bulk-action-toolbar";
 import { BulkConfirmDialog } from "@/components/bulk-confirm-dialog";
-import { useBuses, useCreateBus, useUpdateBus, useRetireBus, useOperators } from "@/lib/api-hooks";
+import { useBuses, useCreateBus, useUpdateBus, useRetireBus, useDeleteBus, useBulkRetireBuses, useBulkDeleteBuses, useOperators } from "@/lib/api-hooks";
 import { useBulkSelection } from "@/hooks/use-bulk-selection";
 import { toast } from "sonner";
 
@@ -46,6 +46,9 @@ export default function BusesPage() {
   const createBus = useCreateBus();
   const updateBus = useUpdateBus();
   const retireBus = useRetireBus();
+  const deleteBus = useDeleteBus();
+  const bulkRetireBuses = useBulkRetireBuses();
+  const bulkDeleteBuses = useBulkDeleteBuses();
   const { data: operators } = useOperators();
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
@@ -53,10 +56,13 @@ export default function BusesPage() {
   const [editing, setEditing] = useState<{ id: string; bus_number: string; capacity: number; status: string; operator_id?: string | null } | null>(null);
   const [form, setForm] = useState({ bus_number: "", capacity: "", status: "active", operator_id: "" });
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [retireId, setRetireId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState<{ bus_number?: string; capacity?: string; operator_id?: string }>({});
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [bulkLoading, setBulkLoading] = useState(false);
   const [bulkOpen, setBulkOpen] = useState(false);
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
 
   const filtered = useMemo(() => {
     if (!buses) return [];
@@ -131,12 +137,25 @@ export default function BusesPage() {
   };
 
   const handleRetire = async () => {
-    if (!deleteId) return;
+    if (!retireId) return;
     try {
-      await retireBus.mutateAsync(deleteId);
+      await retireBus.mutateAsync(retireId);
       toast.success("Bus retired");
     } catch {
       toast.error("Failed to retire bus");
+    } finally {
+      setRetireId(null);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!deleteId) return;
+    try {
+      await deleteBus.mutateAsync(deleteId);
+      toast.success("Bus deleted permanently");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to delete bus";
+      toast.error(message);
     } finally {
       setDeleteId(null);
     }
@@ -144,29 +163,46 @@ export default function BusesPage() {
 
   const handleBulkRetire = async () => {
     setBulkLoading(true);
-    let success = 0;
-    let failed = 0;
-
-    for (const id of bulk.selectedIds) {
-      try {
-        await retireBus.mutateAsync(id);
-        success++;
-      } catch {
-        failed++;
+    const ids = Array.from(bulk.selectedIds);
+    try {
+      const result = await bulkRetireBuses.mutateAsync(ids);
+      bulk.clear();
+      if (result.already_retired_ids.length > 0) {
+        toast.error(`${result.retired_count} retired. ${result.already_retired_ids.length} were already retired.`);
+      } else if (result.not_found.length > 0) {
+        toast.success(`${result.retired_count} retired. ${result.not_found.length} were not found.`);
+      } else {
+        toast.success(`${result.retired_count} bus${result.retired_count !== 1 ? "es" : ""} retired`);
       }
-    }
-
-    bulk.clear();
-
-    if (failed === 0) {
-      toast.success(`${success} bus${success !== 1 ? "es" : ""} retired`);
       setBulkOpen(false);
-    } else if (success === 0) {
-      toast.error(`Failed to retire ${failed} bus${failed !== 1 ? "es" : ""}`);
-    } else {
-      toast.error(`${success} retired, ${failed} failed`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to retire buses";
+      toast.error(message);
+    } finally {
+      setBulkLoading(false);
     }
-    setBulkLoading(false);
+  };
+
+  const handleBulkDelete = async () => {
+    setBulkLoading(true);
+    const ids = Array.from(bulk.selectedIds);
+    try {
+      const result = await bulkDeleteBuses.mutateAsync(ids);
+      bulk.clear();
+      if (result.blocked_count > 0) {
+        toast.error(`${result.deleted_count} deleted. ${result.blocked_count} could not be deleted because they are referenced by existing trips.`);
+      } else if (result.not_found_count > 0) {
+        toast.success(`${result.deleted_count} deleted. ${result.not_found_count} were not found.`);
+      } else {
+        toast.success(`${result.deleted_count} bus${result.deleted_count !== 1 ? "es" : ""} deleted`);
+      }
+      setBulkDeleteOpen(false);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to delete buses";
+      toast.error(message);
+    } finally {
+      setBulkLoading(false);
+    }
   };
 
   const selectedOperator = operators?.find((op) => op.id === form.operator_id);
@@ -189,9 +225,20 @@ export default function BusesPage() {
 
       <BulkActionToolbar
         selectedCount={bulk.selectedCount}
-        onBulkDelete={() => setBulkOpen(true)}
         loading={bulkLoading}
-        label="Retire"
+        actions={[
+          {
+            label: "Delete",
+            icon: <Trash2 className="h-4 w-4" />,
+            onClick: () => setBulkDeleteOpen(true),
+            variant: "destructive",
+          },
+          {
+            label: "Retire",
+            icon: <PowerOff className="h-4 w-4" />,
+            onClick: () => setBulkOpen(true),
+          },
+        ]}
       />
 
       <Card>
@@ -295,7 +342,10 @@ export default function BusesPage() {
                       </td>
                       <td className="px-4 py-3 text-slate-700">{op?.name ?? "—"}</td>
                       <td className="px-4 py-3 text-right">
-                        <DropdownMenu>
+                        <DropdownMenu
+                          open={openMenuId === b.id}
+                          onOpenChange={(open) => setOpenMenuId(open ? b.id : null)}
+                        >
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="icon" className="h-8 w-8">
                               <MoreVertical className="h-4 w-4" />
@@ -308,15 +358,26 @@ export default function BusesPage() {
                             <DropdownMenuItem onClick={() => openEdit(b)}>
                               Edit
                             </DropdownMenuItem>
-                            {b.status !== "retired" && (
-                              <DropdownMenuItem
-                                className="text-red-600"
-                                onClick={() => setDeleteId(b.id)}
-                              >
-                                <PowerOff className="mr-2 h-4 w-4" />
-                                Retire
-                              </DropdownMenuItem>
-                            )}
+                          <DropdownMenuItem
+                            className="text-red-600"
+                            onClick={() => {
+                              setRetireId(b.id);
+                              setOpenMenuId(null);
+                            }}
+                          >
+                            <PowerOff className="mr-2 h-4 w-4" />
+                            Retire
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className="text-red-600"
+                            onClick={() => {
+                              setDeleteId(b.id);
+                              setOpenMenuId(null);
+                            }}
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete
+                          </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </td>
@@ -328,6 +389,19 @@ export default function BusesPage() {
           </div>
         )}
       </Card>
+
+      <BulkConfirmDialog
+        open={bulkDeleteOpen}
+        onOpenChange={(open) => {
+          setBulkDeleteOpen(open);
+        }}
+        onConfirm={handleBulkDelete}
+        loading={bulkLoading}
+        title={`Delete ${selectedBusNumbers.length} bus${selectedBusNumbers.length !== 1 ? "es" : ""} permanently?`}
+        description="Buses referenced by existing trips cannot be deleted."
+        confirmLabel="Delete permanently"
+        selectedNames={selectedBusNumbers}
+      />
 
       <BulkConfirmDialog
         open={bulkOpen}
@@ -343,15 +417,27 @@ export default function BusesPage() {
       />
 
       <ConfirmDialog
+        open={!!retireId}
+        onOpenChange={(open: boolean) => {
+          if (!open) setRetireId(null);
+        }}
+        title="Retire bus"
+        description="This bus will be marked as retired and removed from active scheduling."
+        confirmLabel="Retire"
+        onConfirm={handleRetire}
+        loading={retireBus.isPending}
+      />
+
+      <ConfirmDialog
         open={!!deleteId}
         onOpenChange={(open: boolean) => {
           if (!open) setDeleteId(null);
         }}
-        title="Retire bus"
-        description="This bus will be marked as retired. Are you sure?"
-        confirmLabel="Retire"
-        onConfirm={handleRetire}
-        loading={retireBus.isPending}
+        title="Delete bus permanently"
+        description="This permanently removes the bus. A bus referenced by existing trips cannot be deleted."
+        confirmLabel="Delete permanently"
+        onConfirm={handleDelete}
+        loading={deleteBus.isPending}
       />
 
       <Dialog open={dialogOpen} onOpenChange={(open) => { if (!open) { setDialogOpen(false); setEditing(null); setErrors({}); } }}>
