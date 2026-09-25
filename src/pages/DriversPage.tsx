@@ -31,6 +31,7 @@ import {
   useCreateDriver,
   useUpdateDriver,
   useRemoveDriver,
+  useBulkDeactivateDrivers,
   useUsers,
 } from "@/lib/api-hooks";
 import { useBulkSelection } from "@/hooks/use-bulk-selection";
@@ -42,6 +43,7 @@ export default function DriversPage() {
   const createDriver = useCreateDriver();
   const updateDriver = useUpdateDriver();
   const removeDriver = useRemoveDriver();
+  const bulkDeactivateDrivers = useBulkDeactivateDrivers();
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -117,29 +119,24 @@ export default function DriversPage() {
 
   const handleBulkRemove = async () => {
     setBulkLoading(true);
-    let success = 0;
-    let failed = 0;
-
-    for (const id of bulk.selectedIds) {
-      try {
-        await removeDriver.mutateAsync(id);
-        success++;
-      } catch {
-        failed++;
+    const ids = Array.from(bulk.selectedIds);
+    try {
+      const result = await bulkDeactivateDrivers.mutateAsync(ids);
+      bulk.clear();
+      if (result.already_off_duty_ids.length > 0) {
+        toast.error(`${result.deactivated_count} deactivated. ${result.already_off_duty_ids.length} were already off duty.`);
+      } else if (result.not_found.length > 0) {
+        toast.success(`${result.deactivated_count} deactivated. ${result.not_found.length} were not found.`);
+      } else {
+        toast.success(`${result.deactivated_count} driver${result.deactivated_count !== 1 ? "s" : ""} deactivated`);
       }
-    }
-
-    bulk.clear();
-
-    if (failed === 0) {
-      toast.success(`${success} driver${success !== 1 ? "s" : ""} deactivated`);
       setBulkOpen(false);
-    } else if (success === 0) {
-      toast.error(`Failed to deactivate ${failed} driver${failed !== 1 ? "s" : ""}`);
-    } else {
-      toast.error(`${success} deactivated, ${failed} failed`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to deactivate drivers";
+      toast.error(message);
+    } finally {
+      setBulkLoading(false);
     }
-    setBulkLoading(false);
   };
 
   const selectedDriverNames = (filtered ?? [])

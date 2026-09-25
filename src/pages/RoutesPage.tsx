@@ -26,7 +26,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { BulkActionToolbar } from "@/components/bulk-action-toolbar";
 import { BulkConfirmDialog } from "@/components/bulk-confirm-dialog";
-import { useRoutes, useCreateRoute, useUpdateRoute, useDeleteRoute, useOperators, useTerminals, useRefreshRouteGeometry } from "@/lib/api-hooks";
+import { useRoutes, useCreateRoute, useUpdateRoute, useDeleteRoute, useBulkDeleteRoutes, useOperators, useTerminals, useRefreshRouteGeometry } from "@/lib/api-hooks";
 import { useBulkSelection } from "@/hooks/use-bulk-selection";
 import { toast } from "sonner";
 
@@ -37,6 +37,7 @@ export default function RoutesPage() {
   const createRoute = useCreateRoute();
   const updateRoute = useUpdateRoute();
   const deleteRoute = useDeleteRoute();
+  const bulkDeleteRoutes = useBulkDeleteRoutes();
   const refreshGeometry = useRefreshRouteGeometry();
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
@@ -148,29 +149,24 @@ export default function RoutesPage() {
 
   const handleBulkDelete = async () => {
     setBulkLoading(true);
-    let success = 0;
-    let failed = 0;
-
-    for (const id of bulk.selectedIds) {
-      try {
-        await deleteRoute.mutateAsync(id);
-        success++;
-      } catch {
-        failed++;
+    const ids = Array.from(bulk.selectedIds);
+    try {
+      const result = await bulkDeleteRoutes.mutateAsync(ids);
+      bulk.clear();
+      if (result.blocked_count > 0) {
+        toast.error(`${result.deleted_count} deleted. ${result.blocked_count} could not be deleted because they are associated with existing trips.`);
+      } else if (result.not_found_count > 0) {
+        toast.success(`${result.deleted_count} deleted. ${result.not_found_count} were not found.`);
+      } else {
+        toast.success(`${result.deleted_count} route${result.deleted_count !== 1 ? "s" : ""} deleted`);
       }
-    }
-
-    bulk.clear();
-
-    if (failed === 0) {
-      toast.success(`${success} route${success !== 1 ? "s" : ""} deleted`);
       setBulkOpen(false);
-    } else if (success === 0) {
-      toast.error(`Failed to delete ${failed} route${failed !== 1 ? "s" : ""}`);
-    } else {
-      toast.error(`${success} deleted, ${failed} failed`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to delete routes";
+      toast.error(message);
+    } finally {
+      setBulkLoading(false);
     }
-    setBulkLoading(false);
   };
 
   const selectedRouteNames = filtered

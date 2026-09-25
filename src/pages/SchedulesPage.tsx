@@ -31,7 +31,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { BulkActionToolbar } from "@/components/bulk-action-toolbar";
 import { BulkConfirmDialog } from "@/components/bulk-confirm-dialog";
-import { useTrips, useCreateTrip, useCancelTrip, useRoutes, useBuses, useDrivers } from "@/lib/api-hooks";
+import { useTrips, useCreateTrip, useCancelTrip, useBulkCancelTrips, useRoutes, useBuses, useDrivers } from "@/lib/api-hooks";
 import { useBulkSelection } from "@/hooks/use-bulk-selection";
 import { toast } from "sonner";
 
@@ -47,6 +47,7 @@ export default function SchedulesPage() {
   });
   const createTrip = useCreateTrip();
   const cancelTrip = useCancelTrip();
+  const bulkCancelTrips = useBulkCancelTrips();
   const { data: routes } = useRoutes();
   const { data: buses } = useBuses();
   const { data: drivers } = useDrivers();
@@ -171,29 +172,24 @@ export default function SchedulesPage() {
 
   const handleBulkCancel = async () => {
     setBulkLoading(true);
-    let success = 0;
-    let failed = 0;
-
-    for (const id of bulk.selectedIds) {
-      try {
-        await cancelTrip.mutateAsync(id);
-        success++;
-      } catch {
-        failed++;
+    const ids = Array.from(bulk.selectedIds);
+    try {
+      const result = await bulkCancelTrips.mutateAsync(ids);
+      bulk.clear();
+      if (result.already_cancelled_ids.length > 0) {
+        toast.error(`${result.cancelled_count} cancelled. ${result.already_cancelled_ids.length} were already cancelled.`);
+      } else if (result.not_found.length > 0) {
+        toast.success(`${result.cancelled_count} cancelled. ${result.not_found.length} were not found.`);
+      } else {
+        toast.success(`${result.cancelled_count} trip${result.cancelled_count !== 1 ? "s" : ""} cancelled`);
       }
-    }
-
-    bulk.clear();
-
-    if (failed === 0) {
-      toast.success(`${success} trip${success !== 1 ? "s" : ""} cancelled`);
       setBulkOpen(false);
-    } else if (success === 0) {
-      toast.error(`Failed to cancel ${failed} trip${failed !== 1 ? "s" : ""}`);
-    } else {
-      toast.error(`${success} cancelled, ${failed} failed`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to cancel trips";
+      toast.error(message);
+    } finally {
+      setBulkLoading(false);
     }
-    setBulkLoading(false);
   };
 
   const selectedTripLabels = tripsToRender

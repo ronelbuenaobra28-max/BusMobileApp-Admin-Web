@@ -269,6 +269,25 @@ export function useRemoveDriver() {
   });
 }
 
+export function useBulkDeactivateDrivers() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (ids: string[]) =>
+      api.post<{
+        deactivated_ids: string[];
+        already_off_duty_ids: string[];
+        not_found: string[];
+        deactivated_count: number;
+        already_off_duty_count: number;
+        not_found_count: number;
+      }>("/api/admin/drivers/bulk-deactivate", { driver_ids: ids }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin", "drivers"] });
+      qc.invalidateQueries({ queryKey: ["dashboard", "stats"] });
+    },
+  });
+}
+
 export function useRoutes() {
   return useQuery({
     queryKey: ["admin", "routes"],
@@ -309,6 +328,25 @@ export function useDeleteRoute() {
   return useMutation({
     mutationFn: (id: string) =>
       api.del<void>(`/api/admin/routes/${id}`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin", "routes"] });
+      qc.invalidateQueries({ queryKey: ["dashboard", "stats"] });
+    },
+  });
+}
+
+export function useBulkDeleteRoutes() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (ids: string[]) =>
+      api.post<{
+        deleted_ids: string[];
+        blocked: { id: string; reason: string }[];
+        not_found: string[];
+        deleted_count: number;
+        blocked_count: number;
+        not_found_count: number;
+      }>("/api/admin/routes/bulk-delete", { route_ids: ids }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin", "routes"] });
       qc.invalidateQueries({ queryKey: ["dashboard", "stats"] });
@@ -408,6 +446,25 @@ export function useCancelTrip() {
   return useMutation({
     mutationFn: (id: string) =>
       api.del<{ success: boolean }>(`/api/admin/trips/${id}`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin", "trips"] });
+      qc.invalidateQueries({ queryKey: ["dashboard", "stats"] });
+    },
+  });
+}
+
+export function useBulkCancelTrips() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (ids: string[]) =>
+      api.post<{
+        cancelled_ids: string[];
+        already_cancelled_ids: string[];
+        not_found: string[];
+        cancelled_count: number;
+        already_cancelled_count: number;
+        not_found_count: number;
+      }>("/api/admin/trips/bulk-cancel", { trip_ids: ids }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin", "trips"] });
       qc.invalidateQueries({ queryKey: ["dashboard", "stats"] });
