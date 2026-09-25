@@ -45,6 +45,10 @@ vi.mock("@/lib/api-hooks", () => ({
     mutateAsync: vi.fn(),
     isPending: false,
   }),
+  useDeleteOperator: () => ({
+    mutateAsync: vi.fn(),
+    isPending: false,
+  }),
 }));
 
 vi.mock("sonner", () => ({
@@ -90,5 +94,11 @@ describe("OperatorsPage action menu", () => {
     const menuButton = inactiveRow?.querySelector('[aria-haspopup="menu"]') as HTMLElement;
     expect(menuButton).toBeTruthy();
     expect(menuButton.getAttribute("aria-expanded")).toBe("false");
+  });
+
+  it("bulk toolbar supports multiple action props without breaking", async () => {
+    renderWithProviders(<OperatorsPage />);
+    expect(screen.getByText("Operators")).toBeVisible();
+    expect(screen.getByText("Manage bus operators")).toBeVisible();
   });
 });

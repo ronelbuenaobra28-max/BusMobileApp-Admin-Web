@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Search, MoreVertical, Power, PowerOff } from "lucide-react";
+import { Plus, Search, MoreVertical, Power, PowerOff, Trash2 } from "lucide-react";
 import {
   PageHeader,
   Button,
@@ -25,7 +25,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { BulkActionToolbar } from "@/components/bulk-action-toolbar";
 import { BulkConfirmDialog } from "@/components/bulk-confirm-dialog";
-import { useOperators, useCreateOperator, useUpdateOperator, useDeactivateOperator } from "@/lib/api-hooks";
+import { useOperators, useCreateOperator, useUpdateOperator, useDeactivateOperator, useDeleteOperator } from "@/lib/api-hooks";
 import { useBulkSelection } from "@/hooks/use-bulk-selection";
 import { toast } from "sonner";
 
@@ -34,6 +34,7 @@ export default function OperatorsPage() {
   const createOp = useCreateOperator();
   const updateOp = useUpdateOperator();
   const deactivateOp = useDeactivateOperator();
+  const deleteOp = useDeleteOperator();
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -41,11 +42,13 @@ export default function OperatorsPage() {
   const [name, setName] = useState("");
   const [nameError, setNameError] = useState("");
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [permanentDeleteId, setPermanentDeleteId] = useState<string | null>(null);
   const [activateId, setActivateId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [bulkLoading, setBulkLoading] = useState(false);
   const [bulkOpen, setBulkOpen] = useState(false);
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
 
   const filtered = operators?.filter((op) =>
     op.name.toLowerCase().includes(search.toLowerCase()),
@@ -123,6 +126,19 @@ export default function OperatorsPage() {
     }
   };
 
+  const handlePermanentDelete = async () => {
+    if (!permanentDeleteId) return;
+    try {
+      await deleteOp.mutateAsync(permanentDeleteId);
+      toast.success("Operator deleted permanently");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to delete operator";
+      toast.error(message);
+    } finally {
+      setPermanentDeleteId(null);
+    }
+  };
+
   const handleActivate = async () => {
     if (!activateId) return;
     try {
@@ -141,6 +157,8 @@ export default function OperatorsPage() {
     let failed = 0;
 
     for (const id of bulk.selectedIds) {
+      const op = filtered?.find((o) => o.id === id);
+      if (op && op.active !== "active") continue;
       try {
         await deactivateOp.mutateAsync(id);
         success++;
@@ -158,6 +176,32 @@ export default function OperatorsPage() {
       toast.error(`Failed to deactivate ${failed} operator${failed !== 1 ? "s" : ""}`);
     } else {
       toast.error(`${success} deactivated, ${failed} failed`);
+    }
+    setBulkLoading(false);
+  };
+
+  const handleBulkDelete = async () => {
+    setBulkLoading(true);
+    let success = 0;
+    let failed = 0;
+
+    for (const id of bulk.selectedIds) {
+      try {
+        await deleteOp.mutateAsync(id);
+        success++;
+      } catch {
+        failed++;
+      }
+    }
+
+    bulk.clear();
+
+    if (failed === 0) {
+      toast.success(`${success} operator${success !== 1 ? "s" : ""} deleted`);
+      setBulkDeleteOpen(false);
+    } else {
+      toast.error(`${success} deleted, ${failed} could not be deleted because they are still assigned to buses or routes.`);
+      setBulkDeleteOpen(false);
     }
     setBulkLoading(false);
   };
@@ -183,9 +227,20 @@ export default function OperatorsPage() {
 
       <BulkActionToolbar
         selectedCount={bulk.selectedCount}
-        onBulkDelete={() => setBulkOpen(true)}
         loading={bulkLoading}
-        label="Deactivate"
+        actions={[
+          {
+            label: "Delete",
+            icon: <Trash2 className="h-4 w-4" />,
+            onClick: () => setBulkDeleteOpen(true),
+            variant: "destructive",
+          },
+          {
+            label: "Deactivate",
+            icon: <PowerOff className="h-4 w-4" />,
+            onClick: () => setBulkOpen(true),
+          },
+        ]}
       />
 
       <Card>
@@ -308,27 +363,51 @@ export default function OperatorsPage() {
                             Edit
                           </DropdownMenuItem>
                           {op.active === "active" ? (
-                            <DropdownMenuItem
-                              className="text-red-600"
-                              onClick={() => {
-                                setDeleteId(op.id);
-                                setOpenMenuId(null);
-                              }}
-                            >
-                              <PowerOff className="mr-2 h-4 w-4" />
-                              Deactivate
-                            </DropdownMenuItem>
+                            <>
+                              <DropdownMenuItem
+                                className="text-red-600"
+                                onClick={() => {
+                                  setDeleteId(op.id);
+                                  setOpenMenuId(null);
+                                }}
+                              >
+                                <PowerOff className="mr-2 h-4 w-4" />
+                                Deactivate
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                className="text-red-600"
+                                onClick={() => {
+                                  setPermanentDeleteId(op.id);
+                                  setOpenMenuId(null);
+                                }}
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Delete
+                              </DropdownMenuItem>
+                            </>
                           ) : (
-                            <DropdownMenuItem
-                              className="text-emerald-600"
-                              onClick={() => {
-                                setActivateId(op.id);
-                                setOpenMenuId(null);
-                              }}
-                            >
-                              <Power className="mr-2 h-4 w-4" />
-                              Activate
-                            </DropdownMenuItem>
+                            <>
+                              <DropdownMenuItem
+                                className="text-emerald-600"
+                                onClick={() => {
+                                  setActivateId(op.id);
+                                  setOpenMenuId(null);
+                                }}
+                              >
+                                <Power className="mr-2 h-4 w-4" />
+                                Activate
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                className="text-red-600"
+                                onClick={() => {
+                                  setPermanentDeleteId(op.id);
+                                  setOpenMenuId(null);
+                                }}
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Delete
+                              </DropdownMenuItem>
+                            </>
                           )}
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -354,6 +433,19 @@ export default function OperatorsPage() {
         selectedNames={selectedOperatorNames}
       />
 
+      <BulkConfirmDialog
+        open={bulkDeleteOpen}
+        onOpenChange={(open) => {
+          setBulkDeleteOpen(open);
+        }}
+        onConfirm={handleBulkDelete}
+        loading={bulkLoading}
+        title={`Delete ${selectedOperatorNames.length} operator${selectedOperatorNames.length !== 1 ? "s" : ""} permanently?`}
+        description="Operators assigned to buses or routes cannot be deleted."
+        confirmLabel="Delete permanently"
+        selectedNames={selectedOperatorNames}
+      />
+
       <ConfirmDialog
         open={!!deleteId}
         onOpenChange={(open: boolean) => {
@@ -364,6 +456,18 @@ export default function OperatorsPage() {
         confirmLabel="Deactivate"
         onConfirm={handleDeactivate}
         loading={deactivateOp.isPending}
+      />
+
+      <ConfirmDialog
+        open={!!permanentDeleteId}
+        onOpenChange={(open: boolean) => {
+          if (!open) setPermanentDeleteId(null);
+        }}
+        title="Delete operator permanently"
+        description="This permanently removes the operator. Operators assigned to buses or routes cannot be deleted."
+        confirmLabel="Delete permanently"
+        onConfirm={handlePermanentDelete}
+        loading={deleteOp.isPending}
       />
 
       <ConfirmDialog

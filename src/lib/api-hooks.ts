@@ -62,7 +62,19 @@ export function useDeactivateOperator() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) =>
-      api.del<{ success: boolean }>(`/api/admin/operators/${id}`),
+      api.post<{ success: boolean }>(`/api/admin/operators/${id}/deactivate`, {}),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin", "operators"] });
+      qc.invalidateQueries({ queryKey: ["dashboard", "stats"] });
+    },
+  });
+}
+
+export function useDeleteOperator() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) =>
+      api.del<void>(`/api/admin/operators/${id}`),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin", "operators"] });
       qc.invalidateQueries({ queryKey: ["dashboard", "stats"] });
