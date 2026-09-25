@@ -25,7 +25,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { BulkActionToolbar } from "@/components/bulk-action-toolbar";
 import { BulkConfirmDialog } from "@/components/bulk-confirm-dialog";
-import { useOperators, useCreateOperator, useUpdateOperator, useDeactivateOperator, useDeleteOperator } from "@/lib/api-hooks";
+import { useOperators, useCreateOperator, useUpdateOperator, useDeactivateOperator, useDeleteOperator, useBulkDeleteOperators, useBulkDeactivateOperators } from "@/lib/api-hooks";
 import { useBulkSelection } from "@/hooks/use-bulk-selection";
 import { toast } from "sonner";
 
@@ -35,6 +35,8 @@ export default function OperatorsPage() {
   const updateOp = useUpdateOperator();
   const deactivateOp = useDeactivateOperator();
   const deleteOp = useDeleteOperator();
+  const bulkDeleteOp = useBulkDeleteOperators();
+  const bulkDeactivateOp = useBulkDeactivateOperators();
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -153,57 +155,46 @@ export default function OperatorsPage() {
 
   const handleBulkDeactivate = async () => {
     setBulkLoading(true);
-    let success = 0;
-    let failed = 0;
-
-    for (const id of bulk.selectedIds) {
-      const op = filtered?.find((o) => o.id === id);
-      if (op && op.active !== "active") continue;
-      try {
-        await deactivateOp.mutateAsync(id);
-        success++;
-      } catch {
-        failed++;
+    const ids = Array.from(bulk.selectedIds);
+    try {
+      const result = await bulkDeactivateOp.mutateAsync(ids);
+      bulk.clear();
+      if (result.already_inactive_ids.length > 0) {
+        toast.error(`${result.deactivated_count} deactivated. ${result.already_inactive_ids.length} were already inactive.`);
+      } else if (result.not_found.length > 0) {
+        toast.success(`${result.deactivated_count} deactivated. ${result.not_found.length} were not found.`);
+      } else {
+        toast.success(`${result.deactivated_count} operator${result.deactivated_count !== 1 ? "s" : ""} deactivated`);
       }
-    }
-
-    bulk.clear();
-
-    if (failed === 0) {
-      toast.success(`${success} operator${success !== 1 ? "s" : ""} deactivated`);
       setBulkOpen(false);
-    } else if (success === 0) {
-      toast.error(`Failed to deactivate ${failed} operator${failed !== 1 ? "s" : ""}`);
-    } else {
-      toast.error(`${success} deactivated, ${failed} failed`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to deactivate operators";
+      toast.error(message);
+    } finally {
+      setBulkLoading(false);
     }
-    setBulkLoading(false);
   };
 
   const handleBulkDelete = async () => {
     setBulkLoading(true);
-    let success = 0;
-    let failed = 0;
-
-    for (const id of bulk.selectedIds) {
-      try {
-        await deleteOp.mutateAsync(id);
-        success++;
-      } catch {
-        failed++;
+    const ids = Array.from(bulk.selectedIds);
+    try {
+      const result = await bulkDeleteOp.mutateAsync(ids);
+      bulk.clear();
+      if (result.blocked_count > 0) {
+        toast.error(`${result.deleted_count} deleted. ${result.blocked_count} could not be deleted because they are still assigned to buses or routes.`);
+      } else if (result.not_found_count > 0) {
+        toast.success(`${result.deleted_count} deleted. ${result.not_found_count} were not found.`);
+      } else {
+        toast.success(`${result.deleted_count} operator${result.deleted_count !== 1 ? "s" : ""} deleted`);
       }
-    }
-
-    bulk.clear();
-
-    if (failed === 0) {
-      toast.success(`${success} operator${success !== 1 ? "s" : ""} deleted`);
       setBulkDeleteOpen(false);
-    } else {
-      toast.error(`${success} deleted, ${failed} could not be deleted because they are still assigned to buses or routes.`);
-      setBulkDeleteOpen(false);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to delete operators";
+      toast.error(message);
+    } finally {
+      setBulkLoading(false);
     }
-    setBulkLoading(false);
   };
 
   const isNameValid = name.trim().length > 0;

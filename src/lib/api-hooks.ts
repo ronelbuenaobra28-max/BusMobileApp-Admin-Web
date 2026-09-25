@@ -82,6 +82,42 @@ export function useDeleteOperator() {
   });
 }
 
+export function useBulkDeleteOperators() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (ids: string[]) =>
+      api.post<{
+        deleted_ids: string[];
+        blocked: { id: string; reason: string }[];
+        not_found: string[];
+        deleted_count: number;
+        blocked_count: number;
+        not_found_count: number;
+      }>("/api/admin/operators/bulk-delete", { operator_ids: ids }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin", "operators"] });
+      qc.invalidateQueries({ queryKey: ["dashboard", "stats"] });
+    },
+  });
+}
+
+export function useBulkDeactivateOperators() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (ids: string[]) =>
+      api.post<{
+        deactivated_ids: string[];
+        already_inactive_ids: string[];
+        not_found: string[];
+        deactivated_count: number;
+      }>("/api/admin/operators/bulk-deactivate", { operator_ids: ids }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin", "operators"] });
+      qc.invalidateQueries({ queryKey: ["dashboard", "stats"] });
+    },
+  });
+}
+
 export function useBuses() {
   return useQuery({
     queryKey: ["admin", "buses"],

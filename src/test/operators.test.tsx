@@ -49,6 +49,26 @@ vi.mock("@/lib/api-hooks", () => ({
     mutateAsync: vi.fn(),
     isPending: false,
   }),
+  useBulkDeleteOperators: () => ({
+    mutateAsync: vi.fn().mockResolvedValue({
+      deleted_ids: ["1"],
+      blocked: [],
+      not_found: [],
+      deleted_count: 1,
+      blocked_count: 0,
+      not_found_count: 0,
+    }),
+    isPending: false,
+  }),
+  useBulkDeactivateOperators: () => ({
+    mutateAsync: vi.fn().mockResolvedValue({
+      deactivated_ids: ["1"],
+      already_inactive_ids: [],
+      not_found: [],
+      deactivated_count: 1,
+    }),
+    isPending: false,
+  }),
 }));
 
 vi.mock("sonner", () => ({
