@@ -202,3 +202,35 @@ export interface SettingOut {
   value: number | string;
   updated_at: string | null;
 }
+
+export interface BookingPassenger {
+  id: string;
+  booking_group_id: string;
+  passenger_index: number;
+  first_name: string;
+  last_name: string;
+  contact_number: string;
+  birthdate: string;
+  gender: string | null;
+  verification_id_type: string;
+  emergency_contact: string;
+  luggage_count: number;
+  notes: string | null;
+  booking_id: string;
+  seat_no: string;
+  booking_status: string;
+  booking_created_at: string;
+  qr_code: string;
+  trip_id: string;
+  trip_status: string;
+  scheduled_departure: string | null;
+  arrival_time: string | null;
+  route_name: string | null;
+  origin: string | null;
+  destination: string | null;
+  bus_number: string | null;
+  operator_id: string | null;
+  operator_name: string | null;
+  passenger_id: string | null;
+  passenger_email: string | null;
+}

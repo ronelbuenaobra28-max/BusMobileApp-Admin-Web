@@ -19,6 +19,7 @@ import type {
   User,
   RouteGeometry,
   RefreshRouteGeometryResponse,
+  BookingPassenger,
 } from "@/types";
 
 export function useDashboardStats() {
@@ -594,5 +595,16 @@ export function useUser(userId: string) {
     queryKey: ["admin", "users", userId],
     queryFn: () => api.get<User>(`/api/admin/users/${userId}`),
     enabled: !!userId,
+  });
+}
+
+export function useBookingPassengers(filters?: { operator_id?: string }) {
+  const qs = new URLSearchParams();
+  if (filters?.operator_id) qs.set("operator_id", filters.operator_id);
+  const qsStr = qs.toString();
+  const path = `/api/admin/booking-passengers${qsStr ? `?${qsStr}` : ""}`;
+  return useQuery({
+    queryKey: ["admin", "booking-passengers", filters],
+    queryFn: () => api.get<BookingPassenger[]>(path),
   });
 }

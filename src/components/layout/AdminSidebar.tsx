@@ -11,6 +11,7 @@ import {
   Bell,
   Settings,
   LogOut,
+  Users2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -22,6 +23,7 @@ const nav = [
   { to: "/users", icon: User, label: "Users" },
   { to: "/routes", icon: Route, label: "Routes" },
   { to: "/schedules", icon: CalendarDays, label: "Schedules" },
+  { to: "/booking-passengers", icon: Users2, label: "Booking Passengers" },
   { to: "/notifications", icon: Bell, label: "Notifications" },
   { to: "/settings", icon: Settings, label: "Settings" },
 ];
