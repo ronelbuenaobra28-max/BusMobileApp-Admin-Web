@@ -176,37 +176,39 @@ export default function RoutesPage() {
   return (
     <>
       <ListPageShell
-      header={
-        <div className="space-y-3">
-          <PageHeader
-            title="Routes"
-            description="Manage bus routes"
-            action={
-              <Button onClick={openCreate}>
-                <Plus className="mr-2 h-4 w-4" /> Add Route
-              </Button>
-            }
-          />
-          <BulkActionToolbar
-            selectedCount={bulk.selectedCount}
-            onBulkDelete={() => setBulkOpen(true)}
-            loading={bulkLoading}
-            label="Delete"
-          />
-        </div>
-      }
-      filters={
-        <div className="relative">
-          <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-          <Input
-            placeholder="Search routes..."
-            className="pl-9"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        </div>
-      }
-    >
+        header={
+          <div className="space-y-3">
+            <PageHeader
+              title="Routes"
+              description="Manage bus routes"
+              action={
+                <Button onClick={openCreate}>
+                  <Plus className="mr-2 h-4 w-4" /> Add Route
+                </Button>
+              }
+            />
+            {bulk.selectedCount > 0 && (
+              <BulkActionToolbar
+                selectedCount={bulk.selectedCount}
+                onBulkDelete={() => setBulkOpen(true)}
+                loading={bulkLoading}
+                label="Delete"
+              />
+            )}
+          </div>
+        }
+        filters={
+          <div className="relative">
+            <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+            <Input
+              placeholder="Search routes..."
+              className="pl-9"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+        }
+      >
       <div className="p-4">
         {isLoading && (
           <div className="space-y-3">

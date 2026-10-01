@@ -518,6 +518,25 @@ export function useDeleteTerminal() {
   });
 }
 
+export function useBulkDeleteTerminals() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (ids: string[]) =>
+      api.post<{
+        deleted_ids: string[];
+        blocked: { id: string; reason: string }[];
+        not_found: string[];
+        deleted_count: number;
+        blocked_count: number;
+        not_found_count: number;
+      }>("/api/admin/terminals/bulk-delete", { terminal_ids: ids }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin", "terminals"] });
+      qc.invalidateQueries({ queryKey: ["dashboard", "stats"] });
+    },
+  });
+}
+
 export function useAdminNotificationTest() {
   return useMutation({
     mutationFn: (body?: { title?: string; body?: string }) =>
