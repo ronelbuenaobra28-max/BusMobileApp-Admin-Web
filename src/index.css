@@ -13,6 +13,19 @@ body,
   margin: 0;
 }
 
+/* Every real scroll area in this app (the table's Card, the sidebar) already
+   manages its own internal overflow correctly -- confirmed via DevTools:
+   Card renders at a bounded height with overflow:auto. Despite that, the
+   <html> root itself was still reporting extra scrollable height (while
+   <body> did not), the classic signature of a position:fixed element
+   somewhere exceeding the viewport. Since nothing legitimate needs the
+   outer page itself to scroll, lock it outright rather than keep hunting
+   for whatever one-off element is causing it. */
+html,
+body {
+  overflow: hidden;
+}
+
 /* MapLibre overrides */
 .maplibregl-map {
   @apply rounded-lg;
