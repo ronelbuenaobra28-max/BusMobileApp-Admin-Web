@@ -2,6 +2,17 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Without this, the browser's default 8px body margin adds extra height
+   to the page beyond the 100vh AdminLayout uses, which creates a stray
+   page-level scrollbar and blank space below the sidebar/content even
+   though every panel inside AdminLayout already scrolls internally. */
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
 /* MapLibre overrides */
 .maplibregl-map {
   @apply rounded-lg;
