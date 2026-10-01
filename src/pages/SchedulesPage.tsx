@@ -7,14 +7,11 @@ import {
   PageHeader,
   Button,
   Input,
-  Card,
   EmptyState,
   DropdownMenu,
   DropdownMenuItem,
   DropdownMenuTrigger,
   DropdownMenuContent,
-  ConfirmDialog,
-  Skeleton,
   Dialog,
   DialogContent,
   DialogHeader,
@@ -27,13 +24,15 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  ConfirmDialog,
+  Skeleton,
 } from "@/components/ui";
 import { Checkbox } from "@/components/ui/checkbox";
-import { BulkActionToolbar } from "@/components/bulk-action-toolbar";
 import { BulkConfirmDialog } from "@/components/bulk-confirm-dialog";
 import { useTrips, useCreateTrip, useCancelTrip, useBulkCancelTrips, useRoutes, useBuses, useDrivers } from "@/lib/api-hooks";
 import { useBulkSelection } from "@/hooks/use-bulk-selection";
 import { toast } from "sonner";
+import ListPageShell from "@/components/layout/ListPageShell";
 
 export default function SchedulesPage() {
   const navigate = useNavigate();
@@ -207,26 +206,21 @@ export default function SchedulesPage() {
     !submitting;
 
   return (
-    <div className="space-y-4">
-      <PageHeader
-        title="Schedules"
-        description="Manage scheduled trips"
-        action={
-          <Button onClick={openCreate}>
-            <Plus className="mr-2 h-4 w-4" /> Schedule Trip
-          </Button>
-        }
-      />
-
-      <BulkActionToolbar
-        selectedCount={bulk.selectedCount}
-        onBulkDelete={() => setBulkOpen(true)}
-        loading={bulkLoading}
-        label="Cancel"
-      />
-
-      <Card>
-        <div className="p-4 flex flex-wrap gap-3">
+    <>
+      <ListPageShell
+      header={
+        <PageHeader
+          title="Schedules"
+          description="Manage scheduled trips"
+          action={
+            <Button onClick={openCreate}>
+              <Plus className="mr-2 h-4 w-4" /> Schedule Trip
+            </Button>
+          }
+        />
+      }
+      filters={
+        <div className="flex flex-wrap items-center gap-3">
           <div className="relative flex-1 min-w-[200px]">
             <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
             <Input
@@ -254,9 +248,11 @@ export default function SchedulesPage() {
             onChange={(e) => setDateFilter(e.target.value)}
           />
         </div>
-
+      }
+    >
+      <div className="p-4">
         {isLoading && (
-          <div className="space-y-3 p-4">
+          <div className="space-y-3">
             <Skeleton className="h-10 w-full" />
             <Skeleton className="h-10 w-full" />
             <Skeleton className="h-10 w-full" />
@@ -264,7 +260,7 @@ export default function SchedulesPage() {
         )}
 
         {error && (
-          <div className="p-4 text-sm text-red-600">
+          <div className="text-sm text-red-600">
             Failed to load trips.
             <Button variant="ghost" size="sm" className="ml-2" onClick={() => refetch()}>
               Retry
@@ -366,215 +362,216 @@ export default function SchedulesPage() {
             </table>
           </div>
         )}
-      </Card>
+      </div>
+    </ListPageShell>
 
-      <BulkConfirmDialog
-        open={bulkOpen}
-        onOpenChange={(open) => {
-          setBulkOpen(open);
-        }}
-        onConfirm={handleBulkCancel}
-        loading={bulkLoading}
-        title={`Cancel ${selectedTripLabels.length} trip${selectedTripLabels.length !== 1 ? "s" : ""}?`}
-        description="The selected scheduled trips will be cancelled. This action can be reversed by editing the trip status."
-        confirmLabel="Cancel trips"
-        selectedNames={selectedTripLabels}
-      />
+    <BulkConfirmDialog
+      open={bulkOpen}
+      onOpenChange={(open) => {
+        setBulkOpen(open);
+      }}
+      onConfirm={handleBulkCancel}
+      loading={bulkLoading}
+      title={`Cancel ${selectedTripLabels.length} trip${selectedTripLabels.length !== 1 ? "s" : ""}?`}
+      description="The selected scheduled trips will be cancelled. This action can be reversed by editing the trip status."
+      confirmLabel="Cancel trips"
+      selectedNames={selectedTripLabels}
+    />
 
-      <ConfirmDialog
-        open={!!deleteId}
-        onOpenChange={(open: boolean) => {
-          if (!open) setDeleteId(null);
-        }}
-        title="Cancel trip"
-        description="This trip will be cancelled. Are you sure?"
-        confirmLabel="Cancel trip"
-        onConfirm={handleCancel}
-        loading={cancelTrip.isPending}
-      />
+    <ConfirmDialog
+      open={!!deleteId}
+      onOpenChange={(open: boolean) => {
+        if (!open) setDeleteId(null);
+      }}
+      title="Cancel trip"
+      description="This trip will be cancelled. Are you sure?"
+      confirmLabel="Cancel trip"
+      onConfirm={handleCancel}
+      loading={cancelTrip.isPending}
+    />
 
-      <Dialog open={dialogOpen} onOpenChange={(open) => { if (!open) { setDialogOpen(false); } }}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Schedule Trip</DialogTitle>
-            <DialogDescription>Fill in the trip details below.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-1">
-              <Label htmlFor="route_id">Route</Label>
-              <Select
-                value={form.route_id}
-                onValueChange={handleRouteChange}
-              >
-                <SelectTrigger id="route_id">
-                  <SelectValue placeholder={selectedRoute ? `${selectedRoute.name} (${selectedRoute.origin} → ${selectedRoute.destination})` : "Select route"} />
-                </SelectTrigger>
-                <SelectContent>
-                  {routes?.map((r) => (
-                    <SelectItem key={r.id} value={r.id}>
-                      {r.name} ({r.origin} → {r.destination})
+    <Dialog open={dialogOpen} onOpenChange={(open) => { if (!open) { setDialogOpen(false); } }}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Schedule Trip</DialogTitle>
+          <DialogDescription>Fill in the trip details below.</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div className="space-y-1">
+            <Label htmlFor="route_id">Route</Label>
+            <Select
+              value={form.route_id}
+              onValueChange={handleRouteChange}
+            >
+              <SelectTrigger id="route_id">
+                <SelectValue placeholder={selectedRoute ? `${selectedRoute.name} (${selectedRoute.origin} → ${selectedRoute.destination})` : "Select route"} />
+              </SelectTrigger>
+              <SelectContent>
+                {routes?.map((r) => (
+                  <SelectItem key={r.id} value={r.id}>
+                    {r.name} ({r.origin} → {r.destination})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {errors.route_id && <p className="text-xs text-red-600">{errors.route_id}</p>}
+          </div>
+
+          <div className="space-y-1">
+            <Label htmlFor="operator_id">Operator</Label>
+            <Select
+              value={form.operator_id}
+              onValueChange={handleOperatorChange}
+              disabled={!form.route_id}
+            >
+              <SelectTrigger id="operator_id">
+                <SelectValue placeholder={selectedOperator ? selectedOperator.operator_name : "Select operator"} />
+              </SelectTrigger>
+              <SelectContent>
+                {assignedOperators.length === 0 && form.route_id ? (
+                  <div className="px-3 py-2 text-sm text-slate-500">No operators assigned to this route.</div>
+                ) : (
+                  assignedOperators.map((op) => (
+                    <SelectItem key={op.operator_id} value={op.operator_id}>
+                      {op.operator_name}
                     </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {errors.route_id && <p className="text-xs text-red-600">{errors.route_id}</p>}
-            </div>
+                  ))
+                )}
+              </SelectContent>
+            </Select>
+            {!form.route_id && (
+              <p className="text-xs text-slate-500">Select a route first.</p>
+            )}
+            {form.route_id && assignedOperators.length === 0 && (
+              <p className="text-xs text-red-600">No operators are assigned to this route.</p>
+            )}
+            {errors.operator_id && <p className="text-xs text-red-600">{errors.operator_id}</p>}
+          </div>
 
-            <div className="space-y-1">
-              <Label htmlFor="operator_id">Operator</Label>
-              <Select
-                value={form.operator_id}
-                onValueChange={handleOperatorChange}
-                disabled={!form.route_id}
-              >
-                <SelectTrigger id="operator_id">
-                  <SelectValue placeholder={selectedOperator ? selectedOperator.operator_name : "Select operator"} />
-                </SelectTrigger>
-                <SelectContent>
-                  {assignedOperators.length === 0 && form.route_id ? (
-                    <div className="px-3 py-2 text-sm text-slate-500">No operators assigned to this route.</div>
-                  ) : (
-                    assignedOperators.map((op) => (
-                      <SelectItem key={op.operator_id} value={op.operator_id}>
-                        {op.operator_name}
-                      </SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
-              {!form.route_id && (
-                <p className="text-xs text-slate-500">Select a route first.</p>
-              )}
-              {form.route_id && assignedOperators.length === 0 && (
-                <p className="text-xs text-red-600">No operators are assigned to this route.</p>
-              )}
-              {errors.operator_id && <p className="text-xs text-red-600">{errors.operator_id}</p>}
-            </div>
-
-            <div className="space-y-1">
-              <Label htmlFor="bus_id">Bus</Label>
-              <Select
-                value={form.bus_id}
-                onValueChange={(value) => setForm((f) => ({ ...f, bus_id: value }))}
-                disabled={!form.operator_id}
-              >
-                <SelectTrigger id="bus_id">
-                  <SelectValue placeholder={selectedBus ? `${selectedBus.bus_number} (cap. ${selectedBus.capacity})` : "Select bus"} />
-                </SelectTrigger>
-                <SelectContent>
-                  {operatorBuses.length === 0 && form.operator_id ? (
-                    <div className="px-3 py-2 text-sm text-slate-500">No buses available for this operator.</div>
-                  ) : (
-                    operatorBuses.map((b) => (
-                      <SelectItem key={b.id} value={b.id}>
-                        {b.bus_number} (cap. {b.capacity})
-                      </SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
-              {!form.operator_id && form.route_id && (
-                <p className="text-xs text-slate-500">Select an operator first.</p>
-              )}
-              {form.operator_id && operatorBuses.length === 0 && (
-                <p className="text-xs text-red-600">No buses available for this operator.</p>
-              )}
-              {errors.bus_id && <p className="text-xs text-red-600">{errors.bus_id}</p>}
-            </div>
-
-            <div className="space-y-1">
-              <Label htmlFor="driver_id">Driver</Label>
-              <Select
-                value={form.driver_id}
-                onValueChange={(value) => setForm((f) => ({ ...f, driver_id: value }))}
-                disabled={!form.bus_id}
-              >
-                <SelectTrigger id="driver_id">
-                  <SelectValue placeholder={selectedDriver ? selectedDriver.full_name : "Select driver"} />
-                </SelectTrigger>
-                <SelectContent>
-                  {drivers?.map((d) => (
-                    <SelectItem key={d.id} value={d.id}>
-                      {d.full_name}
+          <div className="space-y-1">
+            <Label htmlFor="bus_id">Bus</Label>
+            <Select
+              value={form.bus_id}
+              onValueChange={(value) => setForm((f) => ({ ...f, bus_id: value }))}
+              disabled={!form.operator_id}
+            >
+              <SelectTrigger id="bus_id">
+                <SelectValue placeholder={selectedBus ? `${selectedBus.bus_number} (cap. ${selectedBus.capacity})` : "Select bus"} />
+              </SelectTrigger>
+              <SelectContent>
+                {operatorBuses.length === 0 && form.operator_id ? (
+                  <div className="px-3 py-2 text-sm text-slate-500">No buses available for this operator.</div>
+                ) : (
+                  operatorBuses.map((b) => (
+                    <SelectItem key={b.id} value={b.id}>
+                      {b.bus_number} (cap. {b.capacity})
                     </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {errors.driver_id && <p className="text-xs text-red-600">{errors.driver_id}</p>}
-            </div>
+                  ))
+                )}
+              </SelectContent>
+            </Select>
+            {!form.operator_id && form.route_id && (
+              <p className="text-xs text-slate-500">Select an operator first.</p>
+            )}
+            {form.operator_id && operatorBuses.length === 0 && (
+              <p className="text-xs text-red-600">No buses available for this operator.</p>
+            )}
+            {errors.bus_id && <p className="text-xs text-red-600">{errors.bus_id}</p>}
+          </div>
 
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <div className="space-y-1">
-                <Label htmlFor="scheduled_departure">Departure</Label>
-                <Input
-                  id="scheduled_departure"
-                  type="datetime-local"
-                  value={form.scheduled_departure}
-                  onChange={(e) => setForm((f) => ({ ...f, scheduled_departure: e.target.value }))}
-                />
-                {errors.scheduled_departure && <p className="text-xs text-red-600">{errors.scheduled_departure}</p>}
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="arrival_time">Arrival (optional)</Label>
-                <Input
-                  id="arrival_time"
-                  type="datetime-local"
-                  value={form.arrival_time}
-                  onChange={(e) => setForm((f) => ({ ...f, arrival_time: e.target.value }))}
-                />
-              </div>
-            </div>
+          <div className="space-y-1">
+            <Label htmlFor="driver_id">Driver</Label>
+            <Select
+              value={form.driver_id}
+              onValueChange={(value) => setForm((f) => ({ ...f, driver_id: value }))}
+              disabled={!form.bus_id}
+            >
+              <SelectTrigger id="driver_id">
+                <SelectValue placeholder={selectedDriver ? selectedDriver.full_name : "Select driver"} />
+              </SelectTrigger>
+              <SelectContent>
+                {drivers?.map((d) => (
+                  <SelectItem key={d.id} value={d.id}>
+                    {d.full_name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {errors.driver_id && <p className="text-xs text-red-600">{errors.driver_id}</p>}
+          </div>
 
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <div className="space-y-1">
-                <Label htmlFor="price">Price (PHP)</Label>
-                <Input
-                  id="price"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={form.price}
-                  onChange={(e) => setForm((f) => ({ ...f, price: e.target.value }))}
-                  placeholder="0.00"
-                />
-                {errors.price && <p className="text-xs text-red-600">{errors.price}</p>}
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="available_seats">Available Seats</Label>
-                <Input
-                  id="available_seats"
-                  type="number"
-                  min="0"
-                  value={form.available_seats}
-                  onChange={(e) => setForm((f) => ({ ...f, available_seats: e.target.value }))}
-                  placeholder="0"
-                />
-                {errors.available_seats && <p className="text-xs text-red-600">{errors.available_seats}</p>}
-              </div>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="space-y-1">
+              <Label htmlFor="scheduled_departure">Departure</Label>
+              <Input
+                id="scheduled_departure"
+                type="datetime-local"
+                value={form.scheduled_departure}
+                onChange={(e) => setForm((f) => ({ ...f, scheduled_departure: e.target.value }))}
+              />
+              {errors.scheduled_departure && <p className="text-xs text-red-600">{errors.scheduled_departure}</p>}
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="arrival_time">Arrival (optional)</Label>
+              <Input
+                id="arrival_time"
+                type="datetime-local"
+                value={form.arrival_time}
+                onChange={(e) => setForm((f) => ({ ...f, arrival_time: e.target.value }))}
+              />
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={submitting}>
-              Cancel
-            </Button>
-            <Button onClick={doCreate} disabled={!canSubmit}>
-              {submitting ? "Saving..." : "Schedule trip"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
-      <ConfirmDialog
-        open={!!deleteId}
-        onOpenChange={(open: boolean) => {
-          if (!open) setDeleteId(null);
-        }}
-        title="Cancel trip"
-        description="This trip will be cancelled. Are you sure?"
-        confirmLabel="Cancel trip"
-        onConfirm={handleCancel}
-        loading={cancelTrip.isPending}
-      />
-    </div>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="space-y-1">
+              <Label htmlFor="price">Price (PHP)</Label>
+              <Input
+                id="price"
+                type="number"
+                min="0"
+                step="0.01"
+                value={form.price}
+                onChange={(e) => setForm((f) => ({ ...f, price: e.target.value }))}
+                placeholder="0.00"
+              />
+              {errors.price && <p className="text-xs text-red-600">{errors.price}</p>}
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="available_seats">Available Seats</Label>
+              <Input
+                id="available_seats"
+                type="number"
+                min="0"
+                value={form.available_seats}
+                onChange={(e) => setForm((f) => ({ ...f, available_seats: e.target.value }))}
+                placeholder="0"
+              />
+              {errors.available_seats && <p className="text-xs text-red-600">{errors.available_seats}</p>}
+            </div>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={submitting}>
+            Cancel
+          </Button>
+          <Button onClick={doCreate} disabled={!canSubmit}>
+            {submitting ? "Saving..." : "Schedule trip"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
+    <ConfirmDialog
+      open={!!deleteId}
+      onOpenChange={(open: boolean) => {
+        if (!open) setDeleteId(null);
+      }}
+      title="Cancel trip"
+      description="This trip will be cancelled. Are you sure?"
+      confirmLabel="Cancel trip"
+      onConfirm={handleCancel}
+      loading={cancelTrip.isPending}
+    />
+    </>
   );
 }

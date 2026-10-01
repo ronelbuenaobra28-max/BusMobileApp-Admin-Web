@@ -7,7 +7,6 @@ import {
   PageHeader,
   Button,
   Input,
-  Card,
   EmptyState,
   DropdownMenu,
   DropdownMenuItem,
@@ -29,6 +28,7 @@ import { BulkConfirmDialog } from "@/components/bulk-confirm-dialog";
 import { useRoutes, useCreateRoute, useUpdateRoute, useDeleteRoute, useBulkDeleteRoutes, useOperators, useTerminals, useRefreshRouteGeometry } from "@/lib/api-hooks";
 import { useBulkSelection } from "@/hooks/use-bulk-selection";
 import { toast } from "sonner";
+import ListPageShell from "@/components/layout/ListPageShell";
 
 export default function RoutesPage() {
   const { data: routes, isLoading, error, refetch } = useRoutes();
@@ -174,39 +174,42 @@ export default function RoutesPage() {
     .map((r) => r.name);
 
   return (
-    <div className="space-y-4">
-      <PageHeader
-        title="Routes"
-        description="Manage bus routes"
-        action={
-          <Button onClick={openCreate}>
-            <Plus className="mr-2 h-4 w-4" /> Add Route
-          </Button>
-        }
-      />
-
-      <BulkActionToolbar
-        selectedCount={bulk.selectedCount}
-        onBulkDelete={() => setBulkOpen(true)}
-        loading={bulkLoading}
-        label="Delete"
-      />
-
-      <Card>
-        <div className="p-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-            <Input
-              placeholder="Search routes..."
-              className="pl-9"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </div>
+    <>
+      <ListPageShell
+      header={
+        <div className="space-y-3">
+          <PageHeader
+            title="Routes"
+            description="Manage bus routes"
+            action={
+              <Button onClick={openCreate}>
+                <Plus className="mr-2 h-4 w-4" /> Add Route
+              </Button>
+            }
+          />
+          <BulkActionToolbar
+            selectedCount={bulk.selectedCount}
+            onBulkDelete={() => setBulkOpen(true)}
+            loading={bulkLoading}
+            label="Delete"
+          />
         </div>
-
+      }
+      filters={
+        <div className="relative">
+          <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+          <Input
+            placeholder="Search routes..."
+            className="pl-9"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+      }
+    >
+      <div className="p-4">
         {isLoading && (
-          <div className="space-y-3 p-4">
+          <div className="space-y-3">
             <Skeleton className="h-10 w-full" />
             <Skeleton className="h-10 w-full" />
             <Skeleton className="h-10 w-full" />
@@ -214,7 +217,7 @@ export default function RoutesPage() {
         )}
 
         {error && (
-          <div className="p-4 text-sm text-red-600">
+          <div className="text-sm text-red-600">
             Failed to load routes.
             <Button variant="ghost" size="sm" className="ml-2" onClick={() => refetch()}>
               Retry
@@ -350,190 +353,191 @@ export default function RoutesPage() {
             </table>
           </div>
         )}
-      </Card>
+      </div>
+    </ListPageShell>
 
-      <BulkConfirmDialog
-        open={bulkOpen}
-        onOpenChange={(open) => {
-          setBulkOpen(open);
-        }}
-        onConfirm={handleBulkDelete}
-        loading={bulkLoading}
-        title={`Delete ${selectedRouteNames.length} route${selectedRouteNames.length !== 1 ? "s" : ""}?`}
-        description="The selected routes will be permanently deleted. Routes with existing trips may be rejected by the backend."
-        confirmLabel="Delete"
-        selectedNames={selectedRouteNames}
-      />
+    <BulkConfirmDialog
+      open={bulkOpen}
+      onOpenChange={(open) => {
+        setBulkOpen(open);
+      }}
+      onConfirm={handleBulkDelete}
+      loading={bulkLoading}
+      title={`Delete ${selectedRouteNames.length} route${selectedRouteNames.length !== 1 ? "s" : ""}?`}
+      description="The selected routes will be permanently deleted. Routes with existing trips may be rejected by the backend."
+      confirmLabel="Delete"
+      selectedNames={selectedRouteNames}
+    />
 
-      <Dialog open={terminalDialogOpen} onOpenChange={(open) => { if (!open) { setTerminalDialogOpen(false); setEditingTerminals(null); } }}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Configure Terminals</DialogTitle>
-            <DialogDescription>
-              Set the origin and destination terminals for this route. Saving will also attempt to generate the road route.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-1">
-              <Label>Origin Terminal</Label>
-              <select
-                value={selectedOriginTerminalId}
-                onChange={(e) => setSelectedOriginTerminalId(e.target.value)}
-                className="w-full rounded-md border border-slate-200 p-2"
-              >
-                <option value="">Select origin terminal</option>
-                {terminals?.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.name} {t.city ? `(${t.city})` : ''}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="space-y-1">
-              <Label>Destination Terminal</Label>
-              <select
-                value={selectedDestinationTerminalId}
-                onChange={(e) => setSelectedDestinationTerminalId(e.target.value)}
-                className="w-full rounded-md border border-slate-200 p-2"
-              >
-                <option value="">Select destination terminal</option>
-                {terminals?.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.name} {t.city ? `(${t.city})` : ''}
-                  </option>
-                ))}
-              </select>
-              {selectedOriginTerminalId === selectedDestinationTerminalId && selectedOriginTerminalId !== "" && (
-                <p className="text-xs text-red-600">Origin and destination must be different terminals.</p>
-              )}
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setTerminalDialogOpen(false)} disabled={terminalSaving}>
-              Cancel
-            </Button>
-            <Button
-              onClick={async () => {
-                if (!editingTerminals) return;
-                if (selectedOriginTerminalId === selectedDestinationTerminalId && selectedOriginTerminalId !== "") return;
-                setTerminalSaving(true);
-                try {
-                  await updateRoute.mutateAsync({
-                    id: editingTerminals.id,
-                    body: {
-                      origin_terminal_id: selectedOriginTerminalId || null,
-                      destination_terminal_id: selectedDestinationTerminalId || null,
-                    },
-                  });
-                  const result = await refreshGeometry.mutateAsync(editingTerminals.id);
-                  toast.success(
-                    `Road route generated successfully. Distance: ${result.distance_km?.toFixed(1) ?? '—'} km, ` +
-                    `Coordinates: ${result.coordinate_count}, Stops: ${result.stop_count}`
-                  );
-                  setTerminalDialogOpen(false);
-                  setEditingTerminals(null);
-                  refetch();
-                } catch {
-                  toast.error('Unable to generate road route. Please verify the terminal coordinates and try again.');
-                } finally {
-                  setTerminalSaving(false);
-                }
-              }}
-              disabled={terminalSaving || (selectedOriginTerminalId === selectedDestinationTerminalId && selectedOriginTerminalId !== "")}
+    <Dialog open={terminalDialogOpen} onOpenChange={(open) => { if (!open) { setTerminalDialogOpen(false); setEditingTerminals(null); } }}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Configure Terminals</DialogTitle>
+          <DialogDescription>
+            Set the origin and destination terminals for this route. Saving will also attempt to generate the road route.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div className="space-y-1">
+            <Label>Origin Terminal</Label>
+            <select
+              value={selectedOriginTerminalId}
+              onChange={(e) => setSelectedOriginTerminalId(e.target.value)}
+              className="w-full rounded-md border border-slate-200 p-2"
             >
-              {terminalSaving ? 'Generating...' : 'Save & Generate Road Route'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <ConfirmDialog
-        open={!!deleteId}
-        onOpenChange={(open: boolean) => {
-          if (!open) setDeleteId(null);
-        }}
-        title="Delete route"
-        description="This action cannot be undone. Are you sure?"
-        confirmLabel="Delete"
-        onConfirm={handleDelete}
-        loading={deleteRoute.isPending}
-      />
-
-      <Dialog open={dialogOpen} onOpenChange={(open) => { if (!open) { setDialogOpen(false); setEditing(null); setErrors({}); } }}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{editing ? "Edit Route" : "Add Route"}</DialogTitle>
-            <DialogDescription>{editing ? "Update route details below." : "Enter route details below."}</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-1">
-              <Label htmlFor="name">Route Name</Label>
-              <Input
-                id="name"
-                value={form.name}
-                onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                placeholder="e.g. Calamba - Alabang"
-              />
-              {errors.name && <p className="text-xs text-red-600">{errors.name}</p>}
-            </div>
-
-            <div className="space-y-1">
-              <Label htmlFor="origin">Origin</Label>
-              <Input
-                id="origin"
-                value={form.origin}
-                onChange={(e) => setForm((f) => ({ ...f, origin: e.target.value }))}
-                placeholder="e.g. Calamba"
-              />
-              {errors.origin && <p className="text-xs text-red-600">{errors.origin}</p>}
-            </div>
-
-            <div className="space-y-1">
-              <Label htmlFor="destination">Destination</Label>
-              <Input
-                id="destination"
-                value={form.destination}
-                onChange={(e) => setForm((f) => ({ ...f, destination: e.target.value }))}
-                placeholder="e.g. Alabang"
-              />
-              {errors.destination && <p className="text-xs text-red-600">{errors.destination}</p>}
-            </div>
-
-            <div className="space-y-2">
-              <Label>Assigned Operators</Label>
-              {!operators || operators.length === 0 ? (
-                <p className="text-xs text-slate-500">No operators available.</p>
-              ) : (
-                <div className="max-h-40 space-y-2 overflow-y-auto rounded-md border border-slate-200 p-2">
-                  {operators.map((op) => (
-                    <label key={op.id} className="flex items-center gap-2 text-sm">
-                      <input
-                        type="checkbox"
-                        className="h-4 w-4 rounded border-slate-300"
-                        checked={selectedOperatorIds.includes(op.id)}
-                        onChange={(e) =>
-                          setSelectedOperatorIds((prev) =>
-                            e.target.checked ? [...prev, op.id] : prev.filter((id) => id !== op.id),
-                          )
-                        }
-                      />
-                      <span className="text-slate-700">{op.name}</span>
-                    </label>
-                  ))}
-                </div>
-              )}
-            </div>
+              <option value="">Select origin terminal</option>
+              {terminals?.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name} {t.city ? `(${t.city})` : ''}
+                </option>
+              ))}
+            </select>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={submitting}>
-              Cancel
-            </Button>
-            <Button onClick={doSave} disabled={submitting}>
-              {submitting ? "Saving..." : editing ? "Save changes" : "Create route"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
+          <div className="space-y-1">
+            <Label>Destination Terminal</Label>
+            <select
+              value={selectedDestinationTerminalId}
+              onChange={(e) => setSelectedDestinationTerminalId(e.target.value)}
+              className="w-full rounded-md border border-slate-200 p-2"
+            >
+              <option value="">Select destination terminal</option>
+              {terminals?.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name} {t.city ? `(${t.city})` : ''}
+                </option>
+              ))}
+            </select>
+            {selectedOriginTerminalId === selectedDestinationTerminalId && selectedOriginTerminalId !== "" && (
+              <p className="text-xs text-red-600">Origin and destination must be different terminals.</p>
+            )}
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setTerminalDialogOpen(false)} disabled={terminalSaving}>
+            Cancel
+          </Button>
+          <Button
+            onClick={async () => {
+              if (!editingTerminals) return;
+              if (selectedOriginTerminalId === selectedDestinationTerminalId && selectedOriginTerminalId !== "") return;
+              setTerminalSaving(true);
+              try {
+                await updateRoute.mutateAsync({
+                  id: editingTerminals.id,
+                  body: {
+                    origin_terminal_id: selectedOriginTerminalId || null,
+                    destination_terminal_id: selectedDestinationTerminalId || null,
+                  },
+                });
+                const result = await refreshGeometry.mutateAsync(editingTerminals.id);
+                toast.success(
+                  `Road route generated successfully. Distance: ${result.distance_km?.toFixed(1) ?? '—'} km, ` +
+                  `Coordinates: ${result.coordinate_count}, Stops: ${result.stop_count}`
+                );
+                setTerminalDialogOpen(false);
+                setEditingTerminals(null);
+                refetch();
+              } catch {
+                toast.error('Unable to generate road route. Please verify the terminal coordinates and try again.');
+              } finally {
+                setTerminalSaving(false);
+              }
+            }}
+            disabled={terminalSaving || (selectedOriginTerminalId === selectedDestinationTerminalId && selectedOriginTerminalId !== "")}
+          >
+            {terminalSaving ? 'Generating...' : 'Save & Generate Road Route'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
+    <ConfirmDialog
+      open={!!deleteId}
+      onOpenChange={(open: boolean) => {
+        if (!open) setDeleteId(null);
+      }}
+      title="Delete route"
+      description="This action cannot be undone. Are you sure?"
+      confirmLabel="Delete"
+      onConfirm={handleDelete}
+      loading={deleteRoute.isPending}
+    />
+
+    <Dialog open={dialogOpen} onOpenChange={(open) => { if (!open) { setDialogOpen(false); setEditing(null); setErrors({}); } }}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{editing ? "Edit Route" : "Add Route"}</DialogTitle>
+          <DialogDescription>{editing ? "Update route details below." : "Enter route details below."}</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div className="space-y-1">
+            <Label htmlFor="name">Route Name</Label>
+            <Input
+              id="name"
+              value={form.name}
+              onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+              placeholder="e.g. Calamba - Alabang"
+            />
+            {errors.name && <p className="text-xs text-red-600">{errors.name}</p>}
+          </div>
+
+          <div className="space-y-1">
+            <Label htmlFor="origin">Origin</Label>
+            <Input
+              id="origin"
+              value={form.origin}
+              onChange={(e) => setForm((f) => ({ ...f, origin: e.target.value }))}
+              placeholder="e.g. Calamba"
+            />
+            {errors.origin && <p className="text-xs text-red-600">{errors.origin}</p>}
+          </div>
+
+          <div className="space-y-1">
+            <Label htmlFor="destination">Destination</Label>
+            <Input
+              id="destination"
+              value={form.destination}
+              onChange={(e) => setForm((f) => ({ ...f, destination: e.target.value }))}
+              placeholder="e.g. Alabang"
+            />
+            {errors.destination && <p className="text-xs text-red-600">{errors.destination}</p>}
+          </div>
+
+          <div className="space-y-2">
+            <Label>Assigned Operators</Label>
+            {!operators || operators.length === 0 ? (
+              <p className="text-xs text-slate-500">No operators available.</p>
+            ) : (
+              <div className="max-h-40 space-y-2 overflow-y-auto rounded-md border border-slate-200 p-2">
+                {operators.map((op) => (
+                  <label key={op.id} className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 rounded border-slate-300"
+                      checked={selectedOperatorIds.includes(op.id)}
+                      onChange={(e) =>
+                        setSelectedOperatorIds((prev) =>
+                          e.target.checked ? [...prev, op.id] : prev.filter((id) => id !== op.id),
+                        )
+                      }
+                    />
+                    <span className="text-slate-700">{op.name}</span>
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={submitting}>
+            Cancel
+          </Button>
+          <Button onClick={doSave} disabled={submitting}>
+            {submitting ? "Saving..." : editing ? "Save changes" : "Create route"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }

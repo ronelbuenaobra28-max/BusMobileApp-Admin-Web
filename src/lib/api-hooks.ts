@@ -483,7 +483,7 @@ export function useTerminals() {
 export function useCreateTerminal() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (body: { name: string; location?: string }) =>
+    mutationFn: (body: { id?: string; name: string; address?: string; city?: string; lat?: number; lng?: number }) =>
       api.post<Terminal>("/api/admin/terminals", body),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin", "terminals"] });
@@ -499,7 +499,7 @@ export function useUpdateTerminal() {
       body,
     }: {
       id: string;
-      body: Partial<{ name: string; location: string }>;
+      body: Partial<{ name: string; address: string; city: string; lat: number; lng: number }>;
     }) => api.put<Terminal>(`/api/admin/terminals/${id}`, body),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin", "terminals"] });

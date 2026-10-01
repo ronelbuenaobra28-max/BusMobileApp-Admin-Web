@@ -29,7 +29,7 @@ export default function NotificationsPage() {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="h-full overflow-y-auto space-y-4">
       <div>
         <h1 className="text-2xl font-semibold text-slate-900">Notifications</h1>
         <p className="text-sm text-slate-500">Send test FCM notifications to all devices.</p>

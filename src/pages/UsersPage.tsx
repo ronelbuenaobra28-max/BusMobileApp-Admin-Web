@@ -7,7 +7,6 @@ import {
   PageHeader,
   Button,
   Input,
-  Card,
   EmptyState,
   DropdownMenu,
   DropdownMenuItem,
@@ -22,6 +21,7 @@ import {
 } from "@/components/ui";
 import { useUsers } from "@/lib/api-hooks";
 import type { User } from "@/types";
+import ListPageShell from "@/components/layout/ListPageShell";
 
 const ROLE_FILTERS = [
   { value: "", label: "All" },
@@ -80,41 +80,42 @@ export default function UsersPage() {
   };
 
   return (
-    <div className="space-y-4">
-      <PageHeader
-        title="Users"
-        description="Manage and monitor registered BusMobileApp user accounts."
-      />
-
-      <Card>
-        <div className="p-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="relative w-full sm:max-w-sm">
-              <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-              <Input
-                placeholder="Search users..."
-                className="pl-9"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-            </div>
-            <Select value={roleFilter} onValueChange={setRoleFilter}>
-              <SelectTrigger className="w-full sm:w-48">
-                <SelectValue placeholder="All roles" />
-              </SelectTrigger>
-              <SelectContent>
-                {ROLE_FILTERS.map((r) => (
-                  <SelectItem key={r.value} value={r.value}>
-                    {r.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+    <ListPageShell
+      header={
+        <PageHeader
+          title="Users"
+          description="Manage and monitor registered BusMobileApp user accounts."
+        />
+      }
+      filters={
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="relative w-full sm:max-w-sm">
+            <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+            <Input
+              placeholder="Search users..."
+              className="pl-9"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
           </div>
+          <Select value={roleFilter} onValueChange={setRoleFilter}>
+            <SelectTrigger className="w-full sm:w-48">
+              <SelectValue placeholder="All roles" />
+            </SelectTrigger>
+            <SelectContent>
+              {ROLE_FILTERS.map((r) => (
+                <SelectItem key={r.value} value={r.value}>
+                  {r.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
-
+      }
+    >
+      <div className="p-4">
         {isLoading && (
-          <div className="space-y-3 p-4">
+          <div className="space-y-3">
             <Skeleton className="h-10 w-full" />
             <Skeleton className="h-10 w-full" />
             <Skeleton className="h-10 w-full" />
@@ -122,7 +123,7 @@ export default function UsersPage() {
         )}
 
         {error && (
-          <div className="p-4 text-sm text-red-600">
+          <div className="text-sm text-red-600">
             Failed to load users.
             <Button variant="ghost" size="sm" className="ml-2" onClick={() => refetch()}>
               Retry
@@ -204,7 +205,7 @@ export default function UsersPage() {
             </table>
           </div>
         )}
-      </Card>
-    </div>
+      </div>
+    </ListPageShell>
   );
 }

@@ -51,7 +51,7 @@ export default function DriverDetailPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="h-full overflow-y-auto space-y-6">
       <PageHeader
         title={driver.full_name}
         description={

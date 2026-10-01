@@ -47,7 +47,7 @@ export default function RouteDetailPage() {
   })) ?? [];
 
   return (
-    <div className="space-y-6">
+    <div className="h-full overflow-y-auto space-y-6">
       <PageHeader
         title={route.name}
         description={

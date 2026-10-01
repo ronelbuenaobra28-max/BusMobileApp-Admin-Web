@@ -7,7 +7,6 @@ import {
   PageHeader,
   Button,
   Input,
-  Card,
   EmptyState,
   DropdownMenu,
   DropdownMenuItem,
@@ -34,6 +33,7 @@ import { BulkConfirmDialog } from "@/components/bulk-confirm-dialog";
 import { useBuses, useCreateBus, useUpdateBus, useRetireBus, useDeleteBus, useBulkRetireBuses, useBulkDeleteBuses, useOperators } from "@/lib/api-hooks";
 import { useBulkSelection } from "@/hooks/use-bulk-selection";
 import { toast } from "sonner";
+import ListPageShell from "@/components/layout/ListPageShell";
 
 const BUS_STATUSES = [
   { value: "active", label: "Active" },
@@ -191,8 +191,8 @@ export default function BusesPage() {
       bulk.clear();
       if (result.blocked_count > 0) {
         toast.error(`${result.deleted_count} deleted. ${result.blocked_count} could not be deleted because they are referenced by existing trips.`);
-      } else if (result.not_found_count > 0) {
-        toast.success(`${result.deleted_count} deleted. ${result.not_found_count} were not found.`);
+      } else if (result.not_found.length > 0) {
+        toast.success(`${result.deleted_count} deleted. ${result.not_found.length} were not found.`);
       } else {
         toast.success(`${result.deleted_count} bus${result.deleted_count !== 1 ? "es" : ""} deleted`);
       }
@@ -212,50 +212,53 @@ export default function BusesPage() {
     .map((b) => b.bus_number);
 
   return (
-    <div className="space-y-4">
-      <PageHeader
-        title="Buses"
-        description="Manage fleet buses"
-        action={
-          <Button onClick={openCreate}>
-            <Plus className="mr-2 h-4 w-4" /> Add Bus
-          </Button>
-        }
-      />
-
-      <BulkActionToolbar
-        selectedCount={bulk.selectedCount}
-        loading={bulkLoading}
-        actions={[
-          {
-            label: "Delete",
-            icon: <Trash2 className="h-4 w-4" />,
-            onClick: () => setBulkDeleteOpen(true),
-            variant: "destructive",
-          },
-          {
-            label: "Retire",
-            icon: <PowerOff className="h-4 w-4" />,
-            onClick: () => setBulkOpen(true),
-          },
-        ]}
-      />
-
-      <Card>
-        <div className="p-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-            <Input
-              placeholder="Search buses..."
-              className="pl-9"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </div>
+    <>
+      <ListPageShell
+      header={
+        <div className="space-y-3">
+          <PageHeader
+            title="Buses"
+            description="Manage fleet buses"
+            action={
+              <Button onClick={openCreate}>
+                <Plus className="mr-2 h-4 w-4" /> Add Bus
+              </Button>
+            }
+          />
+          <BulkActionToolbar
+            selectedCount={bulk.selectedCount}
+            loading={bulkLoading}
+            actions={[
+              {
+                label: "Delete",
+                icon: <Trash2 className="h-4 w-4" />,
+                onClick: () => setBulkDeleteOpen(true),
+                variant: "destructive",
+              },
+              {
+                label: "Retire",
+                icon: <PowerOff className="h-4 w-4" />,
+                onClick: () => setBulkOpen(true),
+              },
+            ]}
+          />
         </div>
-
+      }
+      filters={
+        <div className="relative">
+          <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+          <Input
+            placeholder="Search buses..."
+            className="pl-9"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+      }
+    >
+      <div className="p-4">
         {isLoading && (
-          <div className="space-y-3 p-4">
+          <div className="space-y-3">
             <Skeleton className="h-10 w-full" />
             <Skeleton className="h-10 w-full" />
             <Skeleton className="h-10 w-full" />
@@ -263,7 +266,7 @@ export default function BusesPage() {
         )}
 
         {error && (
-          <div className="p-4 text-sm text-red-600">
+          <div className="text-sm text-red-600">
             Failed to load buses.
             <Button variant="ghost" size="sm" className="ml-2" onClick={() => refetch()}>
               Retry
@@ -388,137 +391,138 @@ export default function BusesPage() {
             </table>
           </div>
         )}
-      </Card>
+      </div>
+    </ListPageShell>
 
-      <BulkConfirmDialog
-        open={bulkDeleteOpen}
-        onOpenChange={(open) => {
-          setBulkDeleteOpen(open);
-        }}
-        onConfirm={handleBulkDelete}
-        loading={bulkLoading}
-        title={`Delete ${selectedBusNumbers.length} bus${selectedBusNumbers.length !== 1 ? "es" : ""} permanently?`}
-        description="Buses referenced by existing trips cannot be deleted."
-        confirmLabel="Delete permanently"
-        selectedNames={selectedBusNumbers}
-      />
+    <BulkConfirmDialog
+      open={bulkDeleteOpen}
+      onOpenChange={(open) => {
+        setBulkDeleteOpen(open);
+      }}
+      onConfirm={handleBulkDelete}
+      loading={bulkLoading}
+      title={`Delete ${selectedBusNumbers.length} bus${selectedBusNumbers.length !== 1 ? "es" : ""} permanently?`}
+      description="Buses referenced by existing trips cannot be deleted."
+      confirmLabel="Delete permanently"
+      selectedNames={selectedBusNumbers}
+    />
 
-      <BulkConfirmDialog
-        open={bulkOpen}
-        onOpenChange={(open) => {
-          setBulkOpen(open);
-        }}
-        onConfirm={handleBulkRetire}
-        loading={bulkLoading}
-        title={`Retire ${selectedBusNumbers.length} bus${selectedBusNumbers.length !== 1 ? "es" : ""}?`}
-        description="The selected buses will be marked as retired and removed from active scheduling."
-        confirmLabel="Retire"
-        selectedNames={selectedBusNumbers}
-      />
+    <BulkConfirmDialog
+      open={bulkOpen}
+      onOpenChange={(open) => {
+        setBulkOpen(open);
+      }}
+      onConfirm={handleBulkRetire}
+      loading={bulkLoading}
+      title={`Retire ${selectedBusNumbers.length} bus${selectedBusNumbers.length !== 1 ? "es" : ""}?`}
+      description="The selected buses will be marked as retired and removed from active scheduling."
+      confirmLabel="Retire"
+      selectedNames={selectedBusNumbers}
+    />
 
-      <ConfirmDialog
-        open={!!retireId}
-        onOpenChange={(open: boolean) => {
-          if (!open) setRetireId(null);
-        }}
-        title="Retire bus"
-        description="This bus will be marked as retired and removed from active scheduling."
-        confirmLabel="Retire"
-        onConfirm={handleRetire}
-        loading={retireBus.isPending}
-      />
+    <ConfirmDialog
+      open={!!retireId}
+      onOpenChange={(open: boolean) => {
+        if (!open) setRetireId(null);
+      }}
+      title="Retire bus"
+      description="This bus will be marked as retired and removed from active scheduling."
+      confirmLabel="Retire"
+      onConfirm={handleRetire}
+      loading={retireBus.isPending}
+    />
 
-      <ConfirmDialog
-        open={!!deleteId}
-        onOpenChange={(open: boolean) => {
-          if (!open) setDeleteId(null);
-        }}
-        title="Delete bus permanently"
-        description="This permanently removes the bus. A bus referenced by existing trips cannot be deleted."
-        confirmLabel="Delete permanently"
-        onConfirm={handleDelete}
-        loading={deleteBus.isPending}
-      />
+    <ConfirmDialog
+      open={!!deleteId}
+      onOpenChange={(open: boolean) => {
+        if (!open) setDeleteId(null);
+      }}
+      title="Delete bus permanently"
+      description="This permanently removes the bus. A bus referenced by existing trips cannot be deleted."
+      confirmLabel="Delete permanently"
+      onConfirm={handleDelete}
+      loading={deleteBus.isPending}
+    />
 
-      <Dialog open={dialogOpen} onOpenChange={(open) => { if (!open) { setDialogOpen(false); setEditing(null); setErrors({}); } }}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{editing ? "Edit Bus" : "Add Bus"}</DialogTitle>
-            <DialogDescription>{editing ? "Update bus details below." : "Enter bus details below."}</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-1">
-              <Label htmlFor="bus_number">Bus Number</Label>
-              <Input
-                id="bus_number"
-                value={form.bus_number}
-                onChange={(e) => setForm((f) => ({ ...f, bus_number: e.target.value }))}
-                placeholder="e.g. HM-102"
-              />
-              {errors.bus_number && <p className="text-xs text-red-600">{errors.bus_number}</p>}
-            </div>
-
-            <div className="space-y-1">
-              <Label htmlFor="operator_id">Operator</Label>
-              <Select
-                value={form.operator_id}
-                onValueChange={(value) => setForm((f) => ({ ...f, operator_id: value === "__none" ? "" : value }))}
-              >
-                <SelectTrigger id="operator_id">
-                  <SelectValue placeholder={selectedOperator ? selectedOperator.name : "Select operator"} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none">None</SelectItem>
-                  {operators?.map((op) => (
-                    <SelectItem key={op.id} value={op.id}>
-                      {op.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-1">
-              <Label htmlFor="capacity">Capacity</Label>
-              <Input
-                id="capacity"
-                type="number"
-                value={form.capacity}
-                onChange={(e) => setForm((f) => ({ ...f, capacity: e.target.value }))}
-                placeholder="e.g. 50"
-              />
-              {errors.capacity && <p className="text-xs text-red-600">{errors.capacity}</p>}
-            </div>
-
-            <div className="space-y-1">
-              <Label htmlFor="status">Status</Label>
-              <Select
-                value={form.status}
-                onValueChange={(value) => setForm((f) => ({ ...f, status: value }))}
-              >
-                <SelectTrigger id="status">
-                  <SelectValue placeholder="Select status" />
-                </SelectTrigger>
-                <SelectContent>
-                  {BUS_STATUSES.map((s) => (
-                    <SelectItem key={s.value} value={s.value}>
-                      {s.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+    <Dialog open={dialogOpen} onOpenChange={(open) => { if (!open) { setDialogOpen(false); setEditing(null); setErrors({}); } }}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{editing ? "Edit Bus" : "Add Bus"}</DialogTitle>
+          <DialogDescription>{editing ? "Update bus details below." : "Enter bus details below."}</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div className="space-y-1">
+            <Label htmlFor="bus_number">Bus Number</Label>
+            <Input
+              id="bus_number"
+              value={form.bus_number}
+              onChange={(e) => setForm((f) => ({ ...f, bus_number: e.target.value }))}
+              placeholder="e.g. HM-102"
+            />
+            {errors.bus_number && <p className="text-xs text-red-600">{errors.bus_number}</p>}
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={submitting}>
-              Cancel
-            </Button>
-            <Button onClick={doSave} disabled={submitting}>
-              {submitting ? "Saving..." : editing ? "Save changes" : "Create bus"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
+
+          <div className="space-y-1">
+            <Label htmlFor="operator_id">Operator</Label>
+            <Select
+              value={form.operator_id}
+              onValueChange={(value) => setForm((f) => ({ ...f, operator_id: value === "__none" ? "" : value }))}
+            >
+              <SelectTrigger id="operator_id">
+                <SelectValue placeholder={selectedOperator ? selectedOperator.name : "Select operator"} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none">None</SelectItem>
+                {operators?.map((op) => (
+                  <SelectItem key={op.id} value={op.id}>
+                    {op.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-1">
+            <Label htmlFor="capacity">Capacity</Label>
+            <Input
+              id="capacity"
+              type="number"
+              value={form.capacity}
+              onChange={(e) => setForm((f) => ({ ...f, capacity: e.target.value }))}
+              placeholder="e.g. 50"
+            />
+            {errors.capacity && <p className="text-xs text-red-600">{errors.capacity}</p>}
+          </div>
+
+          <div className="space-y-1">
+            <Label htmlFor="status">Status</Label>
+            <Select
+              value={form.status}
+              onValueChange={(value) => setForm((f) => ({ ...f, status: value }))}
+            >
+              <SelectTrigger id="status">
+                <SelectValue placeholder="Select status" />
+              </SelectTrigger>
+              <SelectContent>
+                {BUS_STATUSES.map((s) => (
+                  <SelectItem key={s.value} value={s.value}>
+                    {s.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={submitting}>
+            Cancel
+          </Button>
+          <Button onClick={doSave} disabled={submitting}>
+            {submitting ? "Saving..." : editing ? "Save changes" : "Create bus"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }

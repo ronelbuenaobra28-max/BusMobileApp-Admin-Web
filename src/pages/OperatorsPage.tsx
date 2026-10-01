@@ -7,7 +7,6 @@ import {
   PageHeader,
   Button,
   Input,
-  Card,
   EmptyState,
   DropdownMenu,
   DropdownMenuItem,
@@ -28,6 +27,7 @@ import { BulkConfirmDialog } from "@/components/bulk-confirm-dialog";
 import { useOperators, useCreateOperator, useUpdateOperator, useDeactivateOperator, useDeleteOperator, useBulkDeleteOperators, useBulkDeactivateOperators } from "@/lib/api-hooks";
 import { useBulkSelection } from "@/hooks/use-bulk-selection";
 import { toast } from "sonner";
+import ListPageShell from "@/components/layout/ListPageShell";
 
 export default function OperatorsPage() {
   const { data: operators, isLoading, error, refetch } = useOperators();
@@ -205,50 +205,55 @@ export default function OperatorsPage() {
     .map((op) => op.name);
 
   return (
-    <div className="space-y-4">
-      <PageHeader
-        title="Operators"
-        description="Manage bus operators"
-        action={
-          <Button onClick={openCreate}>
-            <Plus className="mr-2 h-4 w-4" /> Add Operator
-          </Button>
-        }
-      />
-
-      <BulkActionToolbar
-        selectedCount={bulk.selectedCount}
-        loading={bulkLoading}
-        actions={[
-          {
-            label: "Delete",
-            icon: <Trash2 className="h-4 w-4" />,
-            onClick: () => setBulkDeleteOpen(true),
-            variant: "destructive",
-          },
-          {
-            label: "Deactivate",
-            icon: <PowerOff className="h-4 w-4" />,
-            onClick: () => setBulkOpen(true),
-          },
-        ]}
-      />
-
-      <Card>
-        <div className="p-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-            <Input
-              placeholder="Search operators..."
-              className="pl-9"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
+    <>
+      <ListPageShell
+      header={
+        <div className="space-y-3">
+          <PageHeader
+            title="Operators"
+            description="Manage bus operators"
+            action={
+              <Button onClick={openCreate}>
+                <Plus className="mr-2 h-4 w-4" /> Add Operator
+              </Button>
+            }
+          />
+          {bulk.selectedCount > 0 && (
+            <BulkActionToolbar
+              selectedCount={bulk.selectedCount}
+              loading={bulkLoading}
+              actions={[
+                {
+                  label: "Delete",
+                  icon: <Trash2 className="h-4 w-4" />,
+                  onClick: () => setBulkDeleteOpen(true),
+                  variant: "destructive",
+                },
+                {
+                  label: "Deactivate",
+                  icon: <PowerOff className="h-4 w-4" />,
+                  onClick: () => setBulkOpen(true),
+                },
+              ]}
             />
-          </div>
+          )}
         </div>
-
+      }
+      filters={
+        <div className="relative">
+          <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+          <Input
+            placeholder="Search operators..."
+            className="pl-9"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+      }
+    >
+      <div className="p-4">
         {isLoading && (
-          <div className="space-y-3 p-4">
+          <div className="space-y-3">
             <Skeleton className="h-10 w-full" />
             <Skeleton className="h-10 w-full" />
             <Skeleton className="h-10 w-full" />
@@ -256,7 +261,7 @@ export default function OperatorsPage() {
         )}
 
         {error && (
-          <div className="p-4 text-sm text-red-600">
+          <div className="text-sm text-red-600">
             Failed to load operators.
             <Button
               variant="ghost"
@@ -409,102 +414,103 @@ export default function OperatorsPage() {
             </table>
           </div>
         )}
-      </Card>
+      </div>
+    </ListPageShell>
 
-      <BulkConfirmDialog
-        open={bulkOpen}
-        onOpenChange={(open) => {
-          setBulkOpen(open);
-        }}
-        onConfirm={handleBulkDeactivate}
-        loading={bulkLoading}
-        title={`Deactivate ${selectedOperatorNames.length} operator${selectedOperatorNames.length !== 1 ? "s" : ""}?`}
-        description="The selected operators will be marked as inactive. This action can be reversed by activating them again."
-        confirmLabel="Deactivate"
-        selectedNames={selectedOperatorNames}
-      />
+    <BulkConfirmDialog
+      open={bulkOpen}
+      onOpenChange={(open) => {
+        setBulkOpen(open);
+      }}
+      onConfirm={handleBulkDeactivate}
+      loading={bulkLoading}
+      title={`Deactivate ${selectedOperatorNames.length} operator${selectedOperatorNames.length !== 1 ? "s" : ""}?`}
+      description="The selected operators will be marked as inactive. This action can be reversed by activating them again."
+      confirmLabel="Deactivate"
+      selectedNames={selectedOperatorNames}
+    />
 
-      <BulkConfirmDialog
-        open={bulkDeleteOpen}
-        onOpenChange={(open) => {
-          setBulkDeleteOpen(open);
-        }}
-        onConfirm={handleBulkDelete}
-        loading={bulkLoading}
-        title={`Delete ${selectedOperatorNames.length} operator${selectedOperatorNames.length !== 1 ? "s" : ""} permanently?`}
-        description="Operators assigned to buses or routes cannot be deleted."
-        confirmLabel="Delete permanently"
-        selectedNames={selectedOperatorNames}
-      />
+    <BulkConfirmDialog
+      open={bulkDeleteOpen}
+      onOpenChange={(open) => {
+        setBulkDeleteOpen(open);
+      }}
+      onConfirm={handleBulkDelete}
+      loading={bulkLoading}
+      title={`Delete ${selectedOperatorNames.length} operator${selectedOperatorNames.length !== 1 ? "s" : ""} permanently?`}
+      description="Operators assigned to buses or routes cannot be deleted."
+      confirmLabel="Delete permanently"
+      selectedNames={selectedOperatorNames}
+    />
 
-      <ConfirmDialog
-        open={!!deleteId}
-        onOpenChange={(open: boolean) => {
-          if (!open) setDeleteId(null);
-        }}
-        title="Deactivate operator"
-        description="This operator will be marked as inactive. Are you sure?"
-        confirmLabel="Deactivate"
-        onConfirm={handleDeactivate}
-        loading={deactivateOp.isPending}
-      />
+    <ConfirmDialog
+      open={!!deleteId}
+      onOpenChange={(open: boolean) => {
+        if (!open) setDeleteId(null);
+      }}
+      title="Deactivate operator"
+      description="This operator will be marked as inactive. Are you sure?"
+      confirmLabel="Deactivate"
+      onConfirm={handleDeactivate}
+      loading={deactivateOp.isPending}
+    />
 
-      <ConfirmDialog
-        open={!!permanentDeleteId}
-        onOpenChange={(open: boolean) => {
-          if (!open) setPermanentDeleteId(null);
-        }}
-        title="Delete operator permanently"
-        description="This permanently removes the operator. Operators assigned to buses or routes cannot be deleted."
-        confirmLabel="Delete permanently"
-        onConfirm={handlePermanentDelete}
-        loading={deleteOp.isPending}
-      />
+    <ConfirmDialog
+      open={!!permanentDeleteId}
+      onOpenChange={(open: boolean) => {
+        if (!open) setPermanentDeleteId(null);
+      }}
+      title="Delete operator permanently"
+      description="This permanently removes the operator. Operators assigned to buses or routes cannot be deleted."
+      confirmLabel="Delete permanently"
+      onConfirm={handlePermanentDelete}
+      loading={deleteOp.isPending}
+    />
 
-      <ConfirmDialog
-        open={!!activateId}
-        onOpenChange={(open: boolean) => {
-          if (!open) setActivateId(null);
-        }}
-        title="Activate operator"
-        description="This operator will be marked as active. Are you sure?"
-        confirmLabel="Activate"
-        onConfirm={handleActivate}
-        loading={updateOp.isPending}
-      />
+    <ConfirmDialog
+      open={!!activateId}
+      onOpenChange={(open: boolean) => {
+        if (!open) setActivateId(null);
+      }}
+      title="Activate operator"
+      description="This operator will be marked as active. Are you sure?"
+      confirmLabel="Activate"
+      onConfirm={handleActivate}
+      loading={updateOp.isPending}
+    />
 
-      <Dialog open={dialogOpen} onOpenChange={(open) => { if (!open) { setDialogOpen(false); setEditing(null); setName(""); setNameError(""); } }}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{editing ? "Edit Operator" : "Add Operator"}</DialogTitle>
-            <DialogDescription>{editing ? "Update the operator name below." : "Enter the operator name below."}</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3">
-            <Input
-              value={name}
-              onChange={(e) => handleNameChange(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && canSubmit) {
-                  doSave();
-                }
-              }}
-              placeholder="Operator name"
-              autoFocus
-            />
-            {nameError && (
-              <p className="text-xs text-red-600">{nameError}</p>
-            )}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={submitting}>
-              Cancel
-            </Button>
-            <Button onClick={doSave} disabled={!canSubmit}>
-              {submitting ? "Saving..." : editing ? "Save changes" : "Create operator"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
+    <Dialog open={dialogOpen} onOpenChange={(open) => { if (!open) { setDialogOpen(false); setEditing(null); setName(""); setNameError(""); } }}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{editing ? "Edit Operator" : "Add Operator"}</DialogTitle>
+          <DialogDescription>{editing ? "Update the operator name below." : "Enter operator name below."}</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3">
+          <Input
+            value={name}
+            onChange={(e) => handleNameChange(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && canSubmit) {
+                doSave();
+              }
+            }}
+            placeholder="Operator name"
+            autoFocus
+          />
+          {nameError && (
+            <p className="text-xs text-red-600">{nameError}</p>
+          )}
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={submitting}>
+            Cancel
+          </Button>
+          <Button onClick={doSave} disabled={!canSubmit}>
+            {submitting ? "Saving..." : editing ? "Save changes" : "Create operator"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }

@@ -7,7 +7,6 @@ import {
   PageHeader,
   Button,
   Input,
-  Card,
   EmptyState,
   DropdownMenu,
   DropdownMenuItem,
@@ -24,7 +23,6 @@ import {
   Skeleton,
 } from "@/components/ui";
 import { Checkbox } from "@/components/ui/checkbox";
-import { BulkActionToolbar } from "@/components/bulk-action-toolbar";
 import { BulkConfirmDialog } from "@/components/bulk-confirm-dialog";
 import {
   useDrivers,
@@ -36,6 +34,7 @@ import {
 } from "@/lib/api-hooks";
 import { useBulkSelection } from "@/hooks/use-bulk-selection";
 import { toast } from "sonner";
+import ListPageShell from "@/components/layout/ListPageShell";
 
 export default function DriversPage() {
   const { data: drivers, isLoading, error } = useDrivers();
@@ -144,39 +143,34 @@ export default function DriversPage() {
     .map((d) => d.full_name);
 
   return (
-    <div className="space-y-4">
-      <PageHeader
-        title="Drivers"
-        description="Manage fleet drivers"
-        action={
-          <Button onClick={openCreate}>
-            <Plus className="mr-2 h-4 w-4" /> Add Driver
-          </Button>
-        }
-      />
-
-      <BulkActionToolbar
-        selectedCount={bulk.selectedCount}
-        onBulkDelete={() => setBulkOpen(true)}
-        loading={bulkLoading}
-        label="Deactivate"
-      />
-
-      <Card>
-        <div className="p-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-            <Input
-              placeholder="Search drivers..."
-              className="pl-9"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </div>
+    <>
+      <ListPageShell
+      header={
+        <PageHeader
+          title="Drivers"
+          description="Manage fleet drivers"
+          action={
+            <Button onClick={openCreate}>
+              <Plus className="mr-2 h-4 w-4" /> Add Driver
+            </Button>
+          }
+        />
+      }
+      filters={
+        <div className="relative">
+          <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+          <Input
+            placeholder="Search drivers..."
+            className="pl-9"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
         </div>
-
+      }
+    >
+      <div className="p-4">
         {isLoading && (
-          <div className="space-y-3 p-4">
+          <div className="space-y-3">
             <Skeleton className="h-10 w-full" />
             <Skeleton className="h-10 w-full" />
             <Skeleton className="h-10 w-full" />
@@ -184,7 +178,7 @@ export default function DriversPage() {
         )}
 
         {error && (
-          <div className="p-4 text-sm text-red-600">Failed to load drivers.</div>
+          <div className="text-sm text-red-600">Failed to load drivers.</div>
         )}
 
         {!isLoading && !error && filtered && filtered.length === 0 && (
@@ -277,97 +271,98 @@ export default function DriversPage() {
             </table>
           </div>
         )}
-      </Card>
+      </div>
+    </ListPageShell>
 
-      <BulkConfirmDialog
-        open={bulkOpen}
-        onOpenChange={(open) => {
-          setBulkOpen(open);
-        }}
-        onConfirm={handleBulkRemove}
-        loading={bulkLoading}
-        title={`Deactivate ${selectedDriverNames.length} driver${selectedDriverNames.length !== 1 ? "s" : ""}?`}
-        description="The selected drivers will be deactivated and removed from active scheduling."
-        confirmLabel="Deactivate"
-        selectedNames={selectedDriverNames}
-      />
+    <BulkConfirmDialog
+      open={bulkOpen}
+      onOpenChange={(open) => {
+        setBulkOpen(open);
+      }}
+      onConfirm={handleBulkRemove}
+      loading={bulkLoading}
+      title={`Deactivate ${selectedDriverNames.length} driver${selectedDriverNames.length !== 1 ? "s" : ""}?`}
+      description="The selected drivers will be deactivated and removed from active scheduling."
+      confirmLabel="Deactivate"
+      selectedNames={selectedDriverNames}
+    />
 
-      <ConfirmDialog
-        open={!!deleteId}
-        onOpenChange={(open: boolean) => {
-          if (!open) setDeleteId(null);
-        }}
-        title="Deactivate driver"
-        description="This driver will be deactivated and removed from active scheduling. Are you sure?"
-        confirmLabel="Deactivate"
-        onConfirm={handleRemove}
-        loading={removeDriver.isPending}
-      />
+    <ConfirmDialog
+      open={!!deleteId}
+      onOpenChange={(open: boolean) => {
+        if (!open) setDeleteId(null);
+      }}
+      title="Deactivate driver"
+      description="This driver will be deactivated and removed from active scheduling. Are you sure?"
+      confirmLabel="Deactivate"
+      onConfirm={handleRemove}
+      loading={removeDriver.isPending}
+    />
 
-      <Dialog open={dialogOpen} onOpenChange={(open) => { if (!open) { setDialogOpen(false); setEditing(null); } }}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{editing ? "Edit Driver" : "Add Driver"}</DialogTitle>
-            <DialogDescription>{editing ? "Update driver details below." : "Select a user account and enter the driver's license number."}</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            {!editing && (
-              <div className="space-y-1">
-                <Label htmlFor="user_id">User Account</Label>
-                <select
-                  id="user_id"
-                  className="flex h-9 w-full rounded-md border border-slate-200 bg-white px-3 py-1 text-sm"
-                  value={form.user_id}
-                  onChange={(e) => setForm((f) => ({ ...f, user_id: e.target.value }))}
-                >
-                  <option value="">Select a driver account...</option>
-                  {eligibleUsers.map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.first_name} {u.last_name} — {u.email}
-                    </option>
-                  ))}
-                </select>
-                {eligibleUsers.length === 0 && (
-                  <p className="text-xs text-slate-500">No eligible driver accounts available.</p>
-                )}
-              </div>
-            )}
-
+    <Dialog open={dialogOpen} onOpenChange={(open) => { if (!open) { setDialogOpen(false); setEditing(null); } }}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{editing ? "Edit Driver" : "Add Driver"}</DialogTitle>
+          <DialogDescription>{editing ? "Update driver details below." : "Select a user account and enter the driver's license number."}</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          {!editing && (
             <div className="space-y-1">
-              <Label htmlFor="license_no">License No</Label>
-              <Input
-                id="license_no"
-                value={form.license_no}
-                onChange={(e) => setForm((f) => ({ ...f, license_no: e.target.value }))}
-                placeholder="e.g. DL-12345"
-              />
+              <Label htmlFor="user_id">User Account</Label>
+              <select
+                id="user_id"
+                className="flex h-9 w-full rounded-md border border-slate-200 bg-white px-3 py-1 text-sm"
+                value={form.user_id}
+                onChange={(e) => setForm((f) => ({ ...f, user_id: e.target.value }))}
+              >
+                <option value="">Select a driver account...</option>
+                {eligibleUsers.map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.first_name} {u.last_name} — {u.email}
+                  </option>
+                ))}
+              </select>
+              {eligibleUsers.length === 0 && (
+                <p className="text-xs text-slate-500">No eligible driver accounts available.</p>
+              )}
             </div>
+          )}
 
-            {editing && (
-              <div className="space-y-1">
-                <Label htmlFor="status">Status</Label>
-                <select
-                  className="flex h-9 w-full rounded-md border border-slate-200 bg-white px-3 py-1 text-sm"
-                  value={form.status}
-                  onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))}
-                >
-                  <option value="available">Available</option>
-                  <option value="on_trip">On Trip</option>
-                  <option value="off_duty">Off Duty</option>
-                </select>
-              </div>
-            )}
+          <div className="space-y-1">
+            <Label htmlFor="license_no">License No</Label>
+            <Input
+              id="license_no"
+              value={form.license_no}
+              onChange={(e) => setForm((f) => ({ ...f, license_no: e.target.value }))}
+              placeholder="e.g. DL-12345"
+            />
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={submitting}>
-              Cancel
-            </Button>
-            <Button onClick={doSave} disabled={submitting}>
-              {submitting ? "Saving..." : editing ? "Save changes" : "Create driver"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
+
+          {editing && (
+            <div className="space-y-1">
+              <Label htmlFor="status">Status</Label>
+              <select
+                className="flex h-9 w-full rounded-md border border-slate-200 bg-white px-3 py-1 text-sm"
+                value={form.status}
+                onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))}
+              >
+                <option value="available">Available</option>
+                <option value="on_trip">On Trip</option>
+                <option value="off_duty">Off Duty</option>
+              </select>
+            </div>
+          )}
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={submitting}>
+            Cancel
+          </Button>
+          <Button onClick={doSave} disabled={submitting}>
+            {submitting ? "Saving..." : editing ? "Save changes" : "Create driver"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }

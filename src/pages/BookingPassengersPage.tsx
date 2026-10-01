@@ -5,7 +5,6 @@ import { Search } from "lucide-react";
 import {
   PageHeader,
   Input,
-  Card,
   EmptyState,
   Skeleton,
   Select,
@@ -16,6 +15,7 @@ import {
   Button,
 } from "@/components/ui";
 import { useBookingPassengers, useOperators } from "@/lib/api-hooks";
+import ListPageShell from "@/components/layout/ListPageShell";
 
 export default function BookingPassengersPage() {
   const { data: rows, isLoading, error, refetch } = useBookingPassengers();
@@ -42,45 +42,46 @@ export default function BookingPassengersPage() {
   }, [rows, search, operatorId]);
 
   return (
-    <div className="space-y-4">
-      <PageHeader
-        title="Booking Passengers"
-        description="Passenger details across all bookings"
-      />
-
-      <Card>
-        <div className="p-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-              <Input
-                placeholder="Search passengers, seats, buses, routes..."
-                className="pl-9"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-            </div>
-            <Select
-              value={operatorId}
-              onValueChange={(value) => setOperatorId(value === "__all" ? undefined : value)}
-            >
-              <SelectTrigger className="w-full sm:w-56">
-                <SelectValue placeholder="All Operators" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__all">All Operators</SelectItem>
-                {operators?.map((op) => (
-                  <SelectItem key={op.id} value={op.id}>
-                    {op.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+    <ListPageShell
+      header={
+        <PageHeader
+          title="Booking Passengers"
+          description="Passenger details across all bookings"
+        />
+      }
+      filters={
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+            <Input
+              placeholder="Search passengers, seats, buses, routes..."
+              className="pl-9"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
           </div>
+          <Select
+            value={operatorId}
+            onValueChange={(value) => setOperatorId(value === "__all" ? undefined : value)}
+          >
+            <SelectTrigger className="w-full sm:w-56">
+              <SelectValue placeholder="All Operators" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__all">All Operators</SelectItem>
+              {operators?.map((op) => (
+                <SelectItem key={op.id} value={op.id}>
+                  {op.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
-
+      }
+    >
+      <div className="p-4">
         {isLoading && (
-          <div className="space-y-3 p-4">
+          <div className="space-y-3">
             <Skeleton className="h-10 w-full" />
             <Skeleton className="h-10 w-full" />
             <Skeleton className="h-10 w-full" />
@@ -88,7 +89,7 @@ export default function BookingPassengersPage() {
         )}
 
         {error && (
-          <div className="p-4 text-sm text-red-600">
+          <div className="text-sm text-red-600">
             Failed to load booking passengers.
             <Button
               variant="ghost"
@@ -176,7 +177,7 @@ export default function BookingPassengersPage() {
             </table>
           </div>
         )}
-      </Card>
-    </div>
+      </div>
+    </ListPageShell>
   );
 }

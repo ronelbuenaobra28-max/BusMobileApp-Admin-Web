@@ -109,7 +109,7 @@ export default function ScheduleDetailPage() {
   const driverLabel = driver?.full_name ?? trip.driver_id;
 
   return (
-    <div className="space-y-6">
+    <div className="h-full overflow-y-auto space-y-6">
       <PageHeader
         title="Trip Details"
         description={trip.id}
