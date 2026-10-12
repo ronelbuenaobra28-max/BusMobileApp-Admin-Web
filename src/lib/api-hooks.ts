@@ -39,7 +39,7 @@ export function useOperators() {
 export function useCreateOperator() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (body: { name: string }) =>
+    mutationFn: (body: { name: string; logo_url?: string | null }) =>
       api.post<Operator>("/api/admin/operators", body),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin", "operators"] });
@@ -51,7 +51,7 @@ export function useCreateOperator() {
 export function useUpdateOperator() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, body }: { id: string; body: Partial<{ name: string; active: string }> }) =>
+    mutationFn: ({ id, body }: { id: string; body: Partial<{ name: string; active: string; logo_url: string | null }> }) =>
       api.put<Operator>(`/api/admin/operators/${id}`, body),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin", "operators"] });

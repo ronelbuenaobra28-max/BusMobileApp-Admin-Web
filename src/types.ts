@@ -53,6 +53,7 @@ export interface Operator {
   id: string;
   name: string;
   active: "active" | "inactive";
+  logo_url: string | null;
 }
 
 export interface Bus {
@@ -147,6 +148,7 @@ export interface Trip {
   bus_number: string;
   operator_id: string | null;
   operator_name: string | null;
+  operator_logo_url: string | null;
 }
 
 export interface Terminal {
