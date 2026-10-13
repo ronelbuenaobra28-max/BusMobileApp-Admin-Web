@@ -230,3 +230,95 @@ describe("SeatLayoutPreview helper", () => {
     );
   });
 });
+
+describe("Rear-row packing preview parity", () => {
+  it("2+2 packs a five-seat rear row at capacity 45", () => {
+    const p = getSeatLayoutPreview(45, "2+2");
+    expect(p.rows).toEqual([4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 5]);
+    expect(p.totalSeats).toBe(45);
+    expect(p.finalRowSeats).toBe(5);
+    expect(p.fullRows).toBe(10);
+    expect(p.valid).toBe(true);
+  });
+
+  it("2+3 packs a six-seat rear row at capacity 56", () => {
+    const p = getSeatLayoutPreview(56, "2+3");
+    expect(p.rows).toEqual([5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 6]);
+    expect(p.totalSeats).toBe(56);
+    expect(p.finalRowSeats).toBe(6);
+    expect(p.fullRows).toBe(10);
+  });
+
+  it("2+3 packs a six-seat rear row at capacity 51", () => {
+    const p = getSeatLayoutPreview(51, "2+3");
+    expect(p.rows).toEqual([5, 5, 5, 5, 5, 5, 5, 5, 5, 6]);
+    expect(p.totalSeats).toBe(51);
+  });
+
+  it("2+3 capacity 55 has no rear row", () => {
+    const p = getSeatLayoutPreview(55, "2+3");
+    expect(p.finalRowSeats).toBe(0);
+    expect(p.fullRows).toBe(11);
+    expect(p.totalSeats).toBe(55);
+    expect(p.rows).toEqual(Array.from({ length: 11 }, () => 5));
+  });
+
+  it("rear rows split 2+3 for five seats and 3+3 for six", () => {
+    expect(getSeatLayoutPreview(45, "2+2").leftSeats[10]).toBe(2);
+    expect(getSeatLayoutPreview(56, "2+3").leftSeats[10]).toBe(3);
+    // Full rows keep the layout's own split.
+    expect(getSeatLayoutPreview(56, "2+3").leftSeats[0]).toBe(2);
+  });
+
+  it("leftSeats always sums with the right side to the row count", () => {
+    for (const layout of ["2+2", "2+3"] as const) {
+      for (let capacity = 1; capacity <= 60; capacity++) {
+        const p = getSeatLayoutPreview(capacity, layout);
+        expect(p.leftSeats.length).toBe(p.rows.length);
+        p.rows.forEach((count, i) => {
+          const left = p.leftSeats[i];
+          // left + right must equal the row count; a 1-seat row is all-right.
+          expect(left, `${layout} @ ${capacity} row ${i}`).toBeGreaterThanOrEqual(0);
+          expect(left).toBeLessThan(count);
+          expect(left + (count - left)).toBe(count);
+        });
+      }
+    }
+  });
+
+  it("leftSeats mirrors the mobile renderer's split", () => {
+    const lastRowSplit = (capacity: number, layout: "2+2" | "2+3") => {
+      const p = getSeatLayoutPreview(capacity, layout);
+      return p.leftSeats[p.leftSeats.length - 1];
+    };
+    // A packed rear row means a configured layout can never end in a lone
+    // seat, so 2/3-seat tails come from remainders of 2 and 3.
+    expect(lastRowSplit(1, "2+2")).toBe(0); // single-seat bus
+    expect(lastRowSplit(42, "2+2")).toBe(1); // 10 rows of 4 + 2
+    expect(lastRowSplit(43, "2+2")).toBe(1); // 10 rows of 4 + 3
+    expect(lastRowSplit(40, "2+2")).toBe(2); // all rows of 4
+    expect(lastRowSplit(45, "2+2")).toBe(2); // packed 5-seat rear row
+    expect(lastRowSplit(53, "2+3")).toBe(1); // 10 rows of 5 + 3
+    expect(lastRowSplit(56, "2+3")).toBe(3); // packed 6-seat rear row
+  });
+
+  it("never packs a remainder other than one", () => {
+    expect(getSeatLayoutPreview(42, "2+2").rows[10]).toBe(2);
+    expect(getSeatLayoutPreview(43, "2+2").rows[10]).toBe(3);
+    expect(getSeatLayoutPreview(52, "2+3").rows[10]).toBe(2);
+    expect(getSeatLayoutPreview(53, "2+3").rows[10]).toBe(3);
+  });
+
+  it("capacity 1 is not packed", () => {
+    expect(getSeatLayoutPreview(1, "2+2").rows).toEqual([1]);
+    expect(getSeatLayoutPreview(1, "2+3").rows).toEqual([1]);
+  });
+
+  it("2+2 preview matches the legacy preview for every capacity", () => {
+    for (let capacity = 1; capacity <= 60; capacity++) {
+      const legacy = getSeatLayoutPreview(capacity, LEGACY_LAYOUT);
+      const twoPlusTwo = getSeatLayoutPreview(capacity, "2+2");
+      expect(twoPlusTwo.rows, `capacity ${capacity}`).toEqual(legacy.rows);
+    }
+  });
+});

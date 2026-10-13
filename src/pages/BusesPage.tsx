@@ -622,9 +622,10 @@ function SeatLayoutPreviewPanel({
       {/* Row-by-row seat arrangement: each dot is one seat, the gap is the aisle. */}
       <div className="mt-3 space-y-1" data-testid="preview-rows">
         {preview.rows.map((count, rowIndex) => {
-          const isFinal = rowIndex === preview.rows.length - 1 && preview.finalRowSeats > 0;
-          const left = isFinal ? Math.floor(count / 2) : Math.floor(preview.seatsPerRow / 2);
-          const right = isFinal ? count - left : count - left;
+          // The helper already knows how each row splits across the aisle,
+          // including packed rear rows (5 -> 2+3, 6 -> 3+3).
+          const left = preview.leftSeats[rowIndex] ?? Math.floor(count / 2);
+          const right = count - left;
           return (
             <div key={rowIndex} className="flex items-center justify-center gap-2">
               {Array.from({ length: left }, (_, i) => (

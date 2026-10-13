@@ -40,12 +40,20 @@ export type SeatLayoutPreview = {
   totalSeats: number;
   /** Row arrangements, e.g. [4, 4, 3] for a 43-seat 2+2 bus. */
   rows: number[];
+  /** Seats rendered left of the aisle for each row (rows[i] -> leftSeats[i]). */
+  leftSeats: number[];
   valid: boolean;
 };
 
 const SEATS_PER_ROW: Record<SeatingLayout, number> = {
   "2+2": 4,
   "2+3": 5,
+};
+
+/** Rear-row packing, mirroring the backend exactly. */
+const REAR_ROW_SEATS: Record<number, number> = {
+  4: 5, // 2+2, remainder 1 -> 5-seat rear row (2+3)
+  5: 6, // 2+3, remainder 1 -> 6-seat rear row (3+3)
 };
 
 /**
@@ -67,11 +75,25 @@ function buildRows(capacity: number, layout: SeatingLayout | typeof LEGACY_LAYOU
   }
 
   const perRow = SEATS_PER_ROW[layout];
-  const full = Math.floor(capacity / perRow);
+  let full = Math.floor(capacity / perRow);
   const remainder = capacity % perRow;
-  const rows = repeat(full, perRow);
-  if (remainder > 0) rows.push(remainder);
-  return rows;
+
+  if (remainder === 1) {
+    const packed = REAR_ROW_SEATS[perRow] ?? perRow + 1;
+    if (capacity >= packed) {
+      full = Math.floor((capacity - packed) / perRow);
+      return [...repeat(full, perRow), packed];
+    }
+    return repeat(0, perRow).concat([capacity]);
+  }
+
+  return [...repeat(full, perRow), ...(remainder > 0 ? [remainder] : [])];
+}
+
+/** Seats left of the aisle for a row of [count] seats (mirrors the mobile renderer). */
+function leftSeatsForRow(count: number): number {
+  if (count <= 0) return 0;
+  return Math.floor(count / 2);
 }
 
 function repeat(count: number, value: number): number[] {
@@ -97,6 +119,7 @@ export function getSeatLayoutPreview(
     totalRows: rows.length,
     totalSeats: rows.reduce((sum, n) => sum + n, 0),
     rows,
+    leftSeats: rows.map(leftSeatsForRow),
     valid: capacity > 0 && rows.reduce((sum, n) => sum + n, 0) === capacity,
   };
 }
