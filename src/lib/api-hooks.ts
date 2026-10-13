@@ -10,6 +10,7 @@ import type {
   Terminal,
   AdminNotificationTestResponse,
   AnalyticsReservations,
+  SeatingLayout,
   AnalyticsRevenue,
   AnalyticsBookingStatus,
   AnalyticsOperators,
@@ -134,6 +135,7 @@ export function useCreateBus() {
       capacity: number;
       status?: string;
       operator_id?: string | null;
+      seating_layout?: SeatingLayout;
     }) => api.post<Bus>("/api/admin/buses", body),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin", "buses"] });
@@ -155,6 +157,7 @@ export function useUpdateBus() {
         capacity: number;
         status: string;
         operator_id: string | null;
+        seating_layout: SeatingLayout;
       }>;
     }) => api.put<Bus>(`/api/admin/buses/${id}`, body),
     onSuccess: () => {

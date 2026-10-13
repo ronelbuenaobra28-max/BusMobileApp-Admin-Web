@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
@@ -32,6 +32,20 @@ import { BulkActionToolbar } from "@/components/bulk-action-toolbar";
 import { BulkConfirmDialog } from "@/components/bulk-confirm-dialog";
 import { useBuses, useCreateBus, useUpdateBus, useRetireBus, useDeleteBus, useBulkRetireBuses, useBulkDeleteBuses, useOperators } from "@/lib/api-hooks";
 import { useBulkSelection } from "@/hooks/use-bulk-selection";
+import {
+  DEFAULT_NEW_BUS_LAYOUT,
+  availableLayoutOptions,
+  buildBusPayload,
+  conflictMessage,
+  describeLayout,
+  isBusConflict,
+  normalizeStoredLayout,
+} from "@/lib/bus-form";
+import type { BusLayoutValue } from "@/lib/bus-form";
+import {
+  formatSeatLayoutPreview,
+  getSeatLayoutPreview,
+} from "@/lib/seat-layout-preview";
 import { toast } from "sonner";
 import ListPageShell from "@/components/layout/ListPageShell";
 
@@ -40,6 +54,7 @@ const BUS_STATUSES = [
   { value: "maintenance", label: "Maintenance" },
   { value: "retired", label: "Retired" },
 ];
+
 
 export default function BusesPage() {
   const { data: buses, isLoading, error, refetch } = useBuses();
@@ -53,8 +68,8 @@ export default function BusesPage() {
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editing, setEditing] = useState<{ id: string; bus_number: string; capacity: number; status: string; operator_id?: string | null } | null>(null);
-  const [form, setForm] = useState({ bus_number: "", capacity: "", status: "active", operator_id: "" });
+  const [editing, setEditing] = useState<{ id: string; bus_number: string; capacity: number; status: string; operator_id?: string | null; seating_layout?: string | null } | null>(null);
+  const [form, setForm] = useState({ bus_number: "", capacity: "", status: "active", operator_id: "", seating_layout: DEFAULT_NEW_BUS_LAYOUT as BusLayoutValue });
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [retireId, setRetireId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -75,7 +90,13 @@ export default function BusesPage() {
 
   const openCreate = () => {
     setEditing(null);
-    setForm({ bus_number: "", capacity: "", status: "active", operator_id: "" });
+    setForm({
+      bus_number: "",
+      capacity: "",
+      status: "active",
+      operator_id: "",
+      seating_layout: DEFAULT_NEW_BUS_LAYOUT,
+    });
     setErrors({});
     setDialogOpen(true);
   };
@@ -86,13 +107,19 @@ export default function BusesPage() {
     capacity: number;
     status: string;
     operator_id?: string | null;
+    seating_layout?: string | null;
   }) => {
+    // Preserve whatever the backend reports. A bus stored as 'legacy' (or null
+    // from before the column existed) must keep that value unless the admin
+    // explicitly chooses a new layout -- never silently convert it to 2+2.
+    const stored = normalizeStoredLayout(b.seating_layout);
     setEditing(b);
     setForm({
       bus_number: b.bus_number,
       capacity: String(b.capacity),
       status: b.status,
       operator_id: b.operator_id ?? "",
+      seating_layout: stored,
     });
     setErrors({});
     setDialogOpen(true);
@@ -114,12 +141,8 @@ export default function BusesPage() {
     if (!validate()) return;
     setSubmitting(true);
     try {
-      const body = {
-        bus_number: form.bus_number.trim(),
-        capacity: Number(form.capacity),
-        status: form.status,
-        operator_id: form.operator_id || null,
-      };
+      const body = buildBusPayload(form, editing);
+
       if (editing) {
         await updateBus.mutateAsync({ id: editing.id, body });
         toast.success("Bus updated");
@@ -129,8 +152,14 @@ export default function BusesPage() {
       }
       setDialogOpen(false);
       setEditing(null);
-    } catch {
-      toast.error("Failed to save bus");
+    } catch (error) {
+      // 409 = layout change blocked by non-cancelled bookings. Keep the dialog
+      // open and the current configuration so nothing is silently altered.
+      if (isBusConflict(error)) {
+        toast.error(conflictMessage(error));
+      } else {
+        toast.error("Failed to save bus");
+      }
     } finally {
       setSubmitting(false);
     }
@@ -343,7 +372,7 @@ export default function BusesPage() {
                           {b.status}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-slate-700">{op?.name ?? "—"}</td>
+                      <td className="px-4 py-3 text-slate-700">{op?.name ?? "â€”"}</td>
                       <td className="px-4 py-3 text-right">
                         <DropdownMenu
                           open={openMenuId === b.id}
@@ -495,6 +524,33 @@ export default function BusesPage() {
           </div>
 
           <div className="space-y-1">
+            <Label htmlFor="seating_layout">Seating layout</Label>
+            <Select
+              value={form.seating_layout}
+              onValueChange={(value) =>
+                setForm((f) => ({ ...f, seating_layout: value as BusLayoutValue }))
+              }
+            >
+              <SelectTrigger id="seating_layout">
+                <SelectValue placeholder="Select seating layout" />
+              </SelectTrigger>
+              <SelectContent>
+                {availableLayoutOptions(form.seating_layout).map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-slate-500">{describeLayout(form.seating_layout)}</p>
+          </div>
+
+          <SeatLayoutPreviewPanel
+            capacity={Number(form.capacity)}
+            layout={form.seating_layout}
+          />
+
+          <div className="space-y-1">
             <Label htmlFor="status">Status</Label>
             <Select
               value={form.status}
@@ -524,5 +580,64 @@ export default function BusesPage() {
       </DialogContent>
     </Dialog>
     </>
+  );
+}
+
+/**
+ * Live seat-layout preview for the bus form.
+ *
+ * Purely a display aid: the backend remains the source of truth for real seat
+ * positions (see `src/lib/seat-layout-preview.ts`).
+ */
+function SeatLayoutPreviewPanel({
+  capacity,
+  layout,
+}: {
+  capacity: number;
+  layout: BusLayoutValue;
+}) {
+  const preview = getSeatLayoutPreview(capacity, layout);
+
+  if (!preview.valid) {
+    return (
+      <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
+        <p className="text-xs text-slate-500">
+          Enter a capacity to preview the seat layout.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-medium text-slate-700">
+          Total seats: <span data-testid="preview-total">{preview.totalSeats}</span>
+        </span>
+        <span className="text-xs text-slate-500" data-testid="preview-summary">
+          {formatSeatLayoutPreview(preview)}
+        </span>
+      </div>
+
+      {/* Row-by-row seat arrangement: each dot is one seat, the gap is the aisle. */}
+      <div className="mt-3 space-y-1" data-testid="preview-rows">
+        {preview.rows.map((count, rowIndex) => {
+          const isFinal = rowIndex === preview.rows.length - 1 && preview.finalRowSeats > 0;
+          const left = isFinal ? Math.floor(count / 2) : Math.floor(preview.seatsPerRow / 2);
+          const right = isFinal ? count - left : count - left;
+          return (
+            <div key={rowIndex} className="flex items-center justify-center gap-2">
+              {Array.from({ length: left }, (_, i) => (
+                <span key={`l-${i}`} className="h-2.5 w-2.5 rounded-sm bg-slate-400" />
+              ))}
+              {right > 0 && left > 0 && <span className="w-4" aria-hidden="true" />}
+              {Array.from({ length: right }, (_, i) => (
+                <span key={`r-${i}`} className="h-2.5 w-2.5 rounded-sm bg-slate-400" />
+              ))}
+            </div>
+          );
+        })}
+      </div>
+    </div>
   );
 }

@@ -56,6 +56,8 @@ export interface Operator {
   logo_url: string | null;
 }
 
+export type SeatingLayout = "2+2" | "2+3";
+
 export interface Bus {
   id: string;
   bus_number: string;
@@ -63,6 +65,7 @@ export interface Bus {
   status: "active" | "maintenance" | "retired";
   current_route_id: string | null;
   operator_id: string | null;
+  seating_layout: SeatingLayout | "legacy" | null;
 }
 
 export interface Driver {
