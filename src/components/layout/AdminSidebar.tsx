@@ -13,6 +13,7 @@ import {
   LogOut,
   Users2,
   MapPin,
+  ReceiptText,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -26,6 +27,7 @@ const nav = [
   { to: "/schedules", icon: CalendarDays, label: "Schedules" },
   { to: "/booking-passengers", icon: Users2, label: "Booking Passengers" },
   { to: "/terminals", icon: MapPin, label: "Terminals" },
+  { to: "/payments/reconciliation", icon: ReceiptText, label: "Reconciliation" },
   { to: "/notifications", icon: Bell, label: "Notifications" },
   { to: "/settings", icon: Settings, label: "Settings" },
 ];

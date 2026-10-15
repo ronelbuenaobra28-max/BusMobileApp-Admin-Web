@@ -21,6 +21,7 @@ import type {
   RouteGeometry,
   RefreshRouteGeometryResponse,
   BookingPassenger,
+  PaymentReconciliation,
 } from "@/types";
 
 export function useDashboardStats() {
@@ -628,5 +629,12 @@ export function useBookingPassengers(filters?: { operator_id?: string }) {
   return useQuery({
     queryKey: ["admin", "booking-passengers", filters],
     queryFn: () => api.get<BookingPassenger[]>(path),
+  });
+}
+
+export function usePaymentReconciliation() {
+  return useQuery({
+    queryKey: ["admin", "payments", "reconciliation"],
+    queryFn: () => api.get<PaymentReconciliation>("/api/admin/payments/reconciliation"),
   });
 }

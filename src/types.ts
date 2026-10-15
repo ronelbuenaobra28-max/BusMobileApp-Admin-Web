@@ -239,3 +239,37 @@ export interface BookingPassenger {
   passenger_id: string | null;
   passenger_email: string | null;
 }
+
+export interface RefundRequiredPayment {
+  id: string;
+  booking_id: string;
+  booking_group_id: string | null;
+  provider: string;
+  provider_ref: string | null;
+  amount: number;
+  status: string;
+  created_at: string;
+  passenger_id: string | null;
+  passenger_email: string | null;
+  trip_id: string | null;
+  route_name: string | null;
+  scheduled_departure: string | null;
+}
+
+export interface PaymentReconciliationEvent {
+  id: number;
+  event: string;
+  session_id: string | null;
+  reference_id: string | null;
+  booking_id: string | null;
+  amount: number | null;
+  currency: string | null;
+  webhook_status: string | null;
+  reason: string;
+  created_at: string;
+}
+
+export interface PaymentReconciliation {
+  refund_required_payments: RefundRequiredPayment[];
+  unmatched_events: PaymentReconciliationEvent[];
+}
