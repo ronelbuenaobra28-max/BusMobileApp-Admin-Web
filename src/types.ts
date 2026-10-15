@@ -100,15 +100,6 @@ export interface OperatorAssignment {
   operator_name: string;
 }
 
-export interface GeocodingResult {
-  id: string;
-  name: string;
-  formattedAddress: string;
-  latitude: number;
-  longitude: number;
-  placeType: string;
-}
-
 export interface Stop {
   id: string;
   route_id: string;
@@ -168,17 +159,6 @@ export interface AdminNotificationTestResponse {
   message_id: string | null;
   tokens_targeted: number;
 }
-
-export interface FleetStats {
-  total_buses: number;
-  active_trips: number;
-  total_bookings_today: number;
-  revenue_today: number;
-}
-
-export type TripStatus = "scheduled" | "onboarding" | "active" | "completed" | "cancelled";
-export type BusStatus = "active" | "maintenance" | "retired";
-export type PointType = "origin" | "checkpoint" | "passenger_stop" | "destination";
 
 export interface User {
   id: string;

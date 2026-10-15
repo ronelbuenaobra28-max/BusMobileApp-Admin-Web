@@ -12,19 +12,6 @@ import type { SeatingLayout } from "@/types";
  * filling in the form.
  */
 
-export const SEATING_LAYOUTS: { value: SeatingLayout; label: string; description: string }[] = [
-  {
-    value: "2+2",
-    label: "2 + 2",
-    description: "Two seats left, two right (4 per row)",
-  },
-  {
-    value: "2+3",
-    label: "2 + 3",
-    description: "Two seats left, three right (5 per row)",
-  },
-];
-
 /**
  * Stored layout for a bus whose physical arrangement has not been confirmed.
  * Displayed distinctly so an admin never mistakes it for a configured layout.

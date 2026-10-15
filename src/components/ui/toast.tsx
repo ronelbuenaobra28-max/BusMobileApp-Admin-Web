@@ -24,13 +24,6 @@ const Toaster = ({ ...props }: ToasterProps) => {
 
 export { Toaster };
 
-export const useToast = () => {
-  const toast = (message: string) => {
-    console.log("toast", message);
-  };
-  return { toast };
-};
-
 export function ToastProvider({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }

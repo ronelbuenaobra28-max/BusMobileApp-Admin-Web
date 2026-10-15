@@ -9,5 +9,3 @@ export const supabase = createClient(supabaseUrl, supabasePublishableKey, {
     autoRefreshToken: true,
   },
 });
-
-export type SupabaseClient = typeof supabase;
