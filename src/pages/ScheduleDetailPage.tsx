@@ -238,6 +238,7 @@ export default function ScheduleDetailPage() {
                       }
                     >
                       <option value="scheduled">Scheduled</option>
+                      <option value="onboarding">Onboarding</option>
                       <option value="active">Active</option>
                       <option value="completed">Completed</option>
                       <option value="cancelled">Cancelled</option>

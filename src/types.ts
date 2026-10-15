@@ -176,7 +176,7 @@ export interface FleetStats {
   revenue_today: number;
 }
 
-export type TripStatus = "scheduled" | "active" | "completed" | "cancelled";
+export type TripStatus = "scheduled" | "onboarding" | "active" | "completed" | "cancelled";
 export type BusStatus = "active" | "maintenance" | "retired";
 export type PointType = "origin" | "checkpoint" | "passenger_stop" | "destination";
 
