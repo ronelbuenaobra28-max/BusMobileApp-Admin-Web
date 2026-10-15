@@ -22,6 +22,7 @@ import type {
   RefreshRouteGeometryResponse,
   BookingPassenger,
   PaymentReconciliation,
+  ReconciliationAction,
 } from "@/types";
 
 export function useDashboardStats() {
@@ -632,9 +633,36 @@ export function useBookingPassengers(filters?: { operator_id?: string }) {
   });
 }
 
-export function usePaymentReconciliation() {
+export function usePaymentReconciliation(includeResolved = false) {
   return useQuery({
-    queryKey: ["admin", "payments", "reconciliation"],
-    queryFn: () => api.get<PaymentReconciliation>("/api/admin/payments/reconciliation"),
+    queryKey: ["admin", "payments", "reconciliation", { includeResolved }],
+    queryFn: () =>
+      api.get<PaymentReconciliation>(
+        `/api/admin/payments/reconciliation${includeResolved ? "?include_resolved=true" : ""}`,
+      ),
+  });
+}
+
+/** Record a refund already issued in the Xendit dashboard (audited). */
+export function useRecordPaymentRefund() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ paymentId, body }: {
+      paymentId: string;
+      body: { amount: string; provider_refund_ref: string; note: string };
+    }) => api.post<ReconciliationAction>(`/api/admin/payments/${paymentId}/refund-record`, body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["admin", "payments", "reconciliation"] }),
+  });
+}
+
+/** Close an unmatched gateway event with an audited resolution. */
+export function useResolveReconciliationEvent() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ eventId, body }: {
+      eventId: number;
+      body: { action: "refunded" | "no_refund_needed"; amount?: string; provider_refund_ref?: string; note: string };
+    }) => api.post<ReconciliationAction>(`/api/admin/payments/reconciliation-events/${eventId}/resolution`, body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["admin", "payments", "reconciliation"] }),
   });
 }

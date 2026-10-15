@@ -247,13 +247,22 @@ export interface RefundRequiredPayment {
   provider: string;
   provider_ref: string | null;
   amount: number;
-  status: string;
+  status: "refund_required" | "refunded" | string;
+  /** When checkout opened - not when money was captured. */
   created_at: string;
+  /** When the payment entered its current status (null before migration 042). */
+  status_updated_at: string | null;
   passenger_id: string | null;
   passenger_email: string | null;
   trip_id: string | null;
   route_name: string | null;
   scheduled_departure: string | null;
+  resolution_action: "refunded" | "no_refund_needed" | null;
+  resolution_amount: number | null;
+  resolution_refund_ref: string | null;
+  resolution_note: string | null;
+  resolved_by_email: string | null;
+  resolved_at: string | null;
 }
 
 export interface PaymentReconciliationEvent {
@@ -266,6 +275,27 @@ export interface PaymentReconciliationEvent {
   currency: string | null;
   webhook_status: string | null;
   reason: string;
+  /** When our server recorded the event. */
+  created_at: string;
+  /** Xendit's own event time. */
+  provider_created_at: string | null;
+  resolution_action: "refunded" | "no_refund_needed" | null;
+  resolution_amount: number | null;
+  resolution_refund_ref: string | null;
+  resolution_note: string | null;
+  resolved_by_email: string | null;
+  resolved_at: string | null;
+}
+
+export interface ReconciliationAction {
+  id: number;
+  payment_id: string | null;
+  event_id: number | null;
+  action: "refunded" | "no_refund_needed";
+  amount: number | null;
+  provider_refund_ref: string | null;
+  note: string;
+  recorded_by: string;
   created_at: string;
 }
 
