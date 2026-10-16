@@ -49,6 +49,29 @@ export async function apiFetch<T>(
   return payload as T;
 }
 
+/**
+ * GET a binary response (for example a private verification ID image) as a
+ * Blob, with the admin's bearer token. The image never gets a public URL:
+ * callers turn the Blob into a short-lived object URL and revoke it.
+ */
+export async function apiFetchBlob(path: string): Promise<Blob> {
+  const token = await getAccessToken();
+  const response = await fetch(`${API_BASE}${path}`, {
+    method: "GET",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    cache: "no-store",
+  });
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({}));
+    const message =
+      formatErrorDetail((payload as { detail?: unknown }).detail) ?? response.statusText;
+    const error = new Error(message) as Error & { status: number };
+    error.status = response.status;
+    throw error;
+  }
+  return response.blob();
+}
+
 export const api = {
   get: <T>(path: string) => apiFetch<T>(path, { method: "GET" }),
   post: <T>(path: string, body: unknown) => apiFetch<T>(path, { method: "POST", body }),

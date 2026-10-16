@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "@/lib/api-client";
+import { api, apiFetchBlob } from "@/lib/api-client";
 import type {
   DashboardStats,
   Operator,
@@ -23,6 +23,8 @@ import type {
   BookingPassenger,
   PaymentReconciliation,
   ReconciliationAction,
+  VerificationFilter,
+  VerificationSubmission,
 } from "@/types";
 
 export function useDashboardStats() {
@@ -664,5 +666,49 @@ export function useResolveReconciliationEvent() {
       body: { action: "refunded" | "no_refund_needed"; amount?: string; provider_refund_ref?: string; note: string };
     }) => api.post<ReconciliationAction>(`/api/admin/payments/reconciliation-events/${eventId}/resolution`, body),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["admin", "payments", "reconciliation"] }),
+  });
+}
+
+export function useVerificationSubmissions(filter: VerificationFilter = "pending") {
+  return useQuery({
+    queryKey: ["admin", "verification-ids", { filter }],
+    queryFn: () => api.get<VerificationSubmission[]>(`/api/admin/verification-ids?status=${filter}`),
+  });
+}
+
+/**
+ * One side of a passenger's ID image, streamed through the backend from the
+ * private bucket. Not kept in the query cache after the viewer closes.
+ */
+export function useVerificationImage(userId: string, side: "front" | "back", enabled = true) {
+  return useQuery({
+    queryKey: ["admin", "verification-ids", userId, "image", side],
+    queryFn: () => apiFetchBlob(`/api/admin/verification-ids/${userId}/image/${side}`),
+    enabled,
+    gcTime: 0,
+    staleTime: 0,
+    retry: false,
+  });
+}
+
+export function useReviewVerification() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ userId, decision, submittedAt, reason }: {
+      userId: string;
+      decision: "approve" | "reject";
+      submittedAt: string | null;
+      reason?: string;
+    }) =>
+      api.post<VerificationSubmission>(
+        `/api/admin/verification-ids/${userId}/${decision}`,
+        decision === "reject"
+          ? { submitted_at: submittedAt, reason: reason ?? "" }
+          : { submitted_at: submittedAt },
+      ),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin", "verification-ids"] });
+      qc.invalidateQueries({ queryKey: ["admin", "users"] });
+    },
   });
 }

@@ -20,6 +20,7 @@ import SettingsPage from "@/pages/SettingsPage";
 import BookingPassengersPage from "@/pages/BookingPassengersPage";
 import TerminalsPage from "@/pages/TerminalsPage";
 import PaymentReconciliationPage from "@/pages/PaymentReconciliationPage";
+import VerificationIdsPage from "@/pages/VerificationIdsPage";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { initialized, profile, loading } = useAuth();
@@ -76,6 +77,7 @@ function AdminRoutes() {
         <Route path="booking-passengers" element={<BookingPassengersPage />} />
         <Route path="terminals" element={<TerminalsPage />} />
         <Route path="payments/reconciliation" element={<PaymentReconciliationPage />} />
+        <Route path="verification-ids" element={<VerificationIdsPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

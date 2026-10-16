@@ -14,6 +14,7 @@ import {
   Users2,
   MapPin,
   ReceiptText,
+  IdCard,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -23,6 +24,7 @@ const nav = [
   { to: "/buses", icon: Bus, label: "Buses" },
   { to: "/drivers", icon: UserCog, label: "Drivers" },
   { to: "/users", icon: User, label: "Users" },
+  { to: "/verification-ids", icon: IdCard, label: "Verification IDs" },
   { to: "/routes", icon: Route, label: "Routes" },
   { to: "/schedules", icon: CalendarDays, label: "Schedules" },
   { to: "/booking-passengers", icon: Users2, label: "Booking Passengers" },

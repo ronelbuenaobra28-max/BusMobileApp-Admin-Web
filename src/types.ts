@@ -283,3 +283,24 @@ export interface PaymentReconciliation {
   refund_required_payments: RefundRequiredPayment[];
   unmatched_events: PaymentReconciliationEvent[];
 }
+
+export type VerificationStatus = "none" | "pending" | "verified" | "rejected";
+
+export type VerificationFilter = "pending" | "verified" | "rejected" | "all";
+
+/** A passenger's verification ID submission, as an admin reviews it. */
+export interface VerificationSubmission {
+  user_id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  verification_id_type: string | null;
+  verification_status: VerificationStatus;
+  has_front: boolean;
+  has_back: boolean;
+  /** When the passenger uploaded the images (null for uploads before migration 045). */
+  submitted_at: string | null;
+  reviewed_at: string | null;
+  reviewed_by_email: string | null;
+  rejection_reason: string | null;
+}
