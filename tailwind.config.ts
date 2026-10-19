@@ -14,9 +14,12 @@ export default {
         background: "#ffffff",
         input: "#e2e8f0",
         ring: "#2563eb",
+        // hover: a darker solid shade. A translucent hover (bg-*/90) lightens
+        // the button and drops white text below WCAG AA (4.5:1).
         destructive: {
           DEFAULT: "#dc2626",
           foreground: "#ffffff",
+          hover: "#b91c1c",
         },
         secondary: {
           DEFAULT: "#f1f5f9",
@@ -32,6 +35,7 @@ export default {
         primary: {
           DEFAULT: "#2563eb",
           foreground: "#ffffff",
+          hover: "#1d4ed8",
           50: "#eff6ff",
           100: "#dbeafe",
           200: "#bfdbfe",
