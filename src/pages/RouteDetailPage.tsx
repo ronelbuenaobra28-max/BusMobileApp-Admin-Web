@@ -142,7 +142,7 @@ export default function RouteDetailPage() {
             <p className="text-sm text-slate-500">No trips on this route.</p>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="data-table w-full text-sm">
                 <thead>
                   <tr className="border-b border-slate-100 text-left text-slate-500">
                     <th className="px-3 py-2 font-medium">Departure</th>

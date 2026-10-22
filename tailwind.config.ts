@@ -13,7 +13,9 @@ export default {
         // from the palette the pages already use (primary-600, red-600, slate).
         background: "#ffffff",
         input: "#e2e8f0",
-        ring: "#2563eb",
+        // SeatPass teal (matches the mobile app). primary is the darker #0F766E
+        // so white text on it passes WCAG AA (5.47:1); #0D9488 is only 3.74.
+        ring: "#0d9488",
         // hover: a darker solid shade. A translucent hover (bg-*/90) lightens
         // the button and drops white text below WCAG AA (4.5:1).
         destructive: {
@@ -30,23 +32,23 @@ export default {
           foreground: "#0f172a",
         },
         muted: {
-          foreground: "#64748b",
+          foreground: "#475569",
         },
         primary: {
-          DEFAULT: "#2563eb",
+          DEFAULT: "#0f766e",
           foreground: "#ffffff",
-          hover: "#1d4ed8",
-          50: "#eff6ff",
-          100: "#dbeafe",
-          200: "#bfdbfe",
-          300: "#93c5fd",
-          400: "#60a5fa",
-          500: "#3b82f6",
-          600: "#2563eb",
-          700: "#1d4ed8",
-          800: "#1e40af",
-          900: "#1e3a8a",
-          950: "#172554",
+          hover: "#115e59",
+          50: "#f0fdfa",
+          100: "#ccfbf1",
+          200: "#99f6e4",
+          300: "#5eead4",
+          400: "#2dd4bf",
+          500: "#14b8a6",
+          600: "#0d9488",
+          700: "#0f766e",
+          800: "#115e59",
+          900: "#134e4a",
+          950: "#042f2e",
         },
         slate: {
           850: "#1e293b",
@@ -56,6 +58,14 @@ export default {
         lg: "0.75rem",
         md: "calc(0.75rem - 2px)",
         sm: "calc(0.75rem - 4px)",
+      },
+      keyframes: {
+        shimmer: {
+          "100%": { transform: "translateX(100%)" },
+        },
+      },
+      animation: {
+        shimmer: "shimmer 1.6s infinite",
       },
       fontFamily: {
         sans: [

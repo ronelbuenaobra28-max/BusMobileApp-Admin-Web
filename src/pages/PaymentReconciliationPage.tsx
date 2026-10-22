@@ -236,7 +236,7 @@ export default function PaymentReconciliationPage() {
                 <EmptyState title="Nothing to refund" description="No payments are awaiting a refund." />
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
+                  <table className="data-table w-full text-sm">
                     <thead>
                       <tr className="border-b border-slate-100 text-left text-slate-500">
                         <th className="px-4 py-3">Flagged</th>
@@ -296,7 +296,7 @@ export default function PaymentReconciliationPage() {
                 <EmptyState title="No unmatched events" description="Every gateway event matched a payment." />
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
+                  <table className="data-table w-full text-sm">
                     <thead>
                       <tr className="border-b border-slate-100 text-left text-slate-500">
                         <th className="px-4 py-3">Received</th>

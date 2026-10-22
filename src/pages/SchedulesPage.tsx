@@ -1,5 +1,6 @@
 "use client";
 
+import { StatusBadge } from "@/components/ui/status-badge";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Plus, Search, MoreVertical, Trash2 } from "lucide-react";
@@ -33,6 +34,16 @@ import { useTrips, useCreateTrip, useCancelTrip, useBulkCancelTrips, useRoutes, 
 import { useBulkSelection } from "@/hooks/use-bulk-selection";
 import { toast } from "sonner";
 import ListPageShell from "@/components/layout/ListPageShell";
+
+function formatDeparture(iso: string) {
+  return new Date(iso).toLocaleString("en-PH", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
 
 export default function SchedulesPage() {
   const navigate = useNavigate();
@@ -191,9 +202,15 @@ export default function SchedulesPage() {
     }
   };
 
+  // Trips carry only a route id; show the route by name.
+  const routeLabel = (routeId: string) => {
+    const r = routes?.find((route) => route.id === routeId);
+    return r ? `${r.origin} → ${r.destination}` : "Unknown route";
+  };
+
   const selectedTripLabels = tripsToRender
     .filter((t) => bulk.isSelected(t.id))
-    .map((t) => `${t.route_id} - ${new Date(t.scheduled_departure).toLocaleString()}`);
+    .map((t) => `${routeLabel(t.route_id)} - ${formatDeparture(t.scheduled_departure)}`);
 
   const canSubmit =
     form.route_id &&
@@ -278,7 +295,7 @@ export default function SchedulesPage() {
 
         {!isLoading && !error && tripsToRender.length > 0 && (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="data-table w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-100 text-left text-slate-500">
                   <th className="px-4 py-3 w-10">
@@ -312,20 +329,17 @@ export default function SchedulesPage() {
                         aria-label={`Select trip ${t.id}`}
                       />
                     </td>
-                    <td className="px-4 py-3 font-medium text-slate-900">
-                      {t.route_id}
+                    <td className="px-4 py-3">
+                      <p className="font-medium text-slate-900">{routeLabel(t.route_id)}</p>
+                      <p className="text-xs text-slate-500">
+                        {[t.operator_name, t.bus_number && `Bus ${t.bus_number}`].filter(Boolean).join(" · ")}
+                      </p>
                     </td>
                     <td className="px-4 py-3 text-slate-700">
-                      {new Date(t.scheduled_departure).toLocaleString()}
+                      {formatDeparture(t.scheduled_departure)}
                     </td>
                     <td className="px-4 py-3">
-                      <span className={`inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-medium ${
-                        t.status === "active" ? "border-transparent bg-emerald-100 text-emerald-700" :
-                        t.status === "cancelled" ? "border-transparent bg-red-100 text-red-700" :
-                        "border-transparent bg-slate-100 text-slate-700"
-                      }`}>
-                        {t.status}
-                      </span>
+                      <StatusBadge status={t.status} />
                     </td>
                     <td className="px-4 py-3 text-slate-700">
                       {new Intl.NumberFormat("en-PH", {

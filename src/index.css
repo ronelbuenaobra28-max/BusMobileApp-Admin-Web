@@ -30,3 +30,28 @@ body {
 .maplibregl-map {
   @apply rounded-lg;
 }
+/* Shared look for the data tables on list and detail pages (they use plain
+   <table className="data-table ...">): a sticky, quiet header and a soft
+   row hover, so long lists stay readable while the card scrolls. */
+@layer components {
+  .data-table thead th {
+    @apply sticky top-0 z-10 bg-slate-50/95 text-xs font-semibold uppercase tracking-wide text-slate-600 backdrop-blur supports-[backdrop-filter]:bg-slate-50/80;
+  }
+  .data-table thead tr {
+    @apply border-slate-200;
+  }
+  .data-table tbody tr {
+    @apply transition-colors hover:bg-primary-50/50;
+  }
+}
+
+/* Honour the OS "reduce motion" setting for every transition/animation. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

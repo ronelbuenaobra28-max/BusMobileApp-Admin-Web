@@ -101,7 +101,7 @@ describe("VerificationIdsPage", () => {
   it("shows a loading state", () => {
     listState = { isLoading: true };
     const { container } = renderPage();
-    expect(container.querySelectorAll(".animate-pulse").length).toBeGreaterThan(0);
+    expect(container.querySelectorAll('[data-slot="skeleton"]').length).toBeGreaterThan(0);
     expect(screen.queryByText("No IDs awaiting review")).not.toBeInTheDocument();
   });
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { StatusBadge } from "@/components/ui/status-badge";
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Plus, Search, MoreVertical, Power, PowerOff, Trash2, Upload, X, ImageIcon } from "lucide-react";
@@ -443,7 +444,7 @@ export default function OperatorsPage() {
 
         {!isLoading && !error && filtered && filtered.length > 0 && (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="data-table w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-100 text-left text-slate-500">
                   <th className="px-4 py-3 w-10">
@@ -485,11 +486,7 @@ export default function OperatorsPage() {
                       {op.name}
                     </td>
                     <td className="px-4 py-3">
-                      <span className={`inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-medium ${
-                        op.active === "active" ? "border-transparent bg-emerald-100 text-emerald-700" : "border-transparent bg-slate-100 text-slate-700"
-                      }`}>
-                        {op.active}
-                      </span>
+                      <StatusBadge status={op.active} />
                     </td>
                     <td className="px-4 py-3 text-right">
                       <DropdownMenu

@@ -22,14 +22,19 @@ import TerminalsPage from "@/pages/TerminalsPage";
 import PaymentReconciliationPage from "@/pages/PaymentReconciliationPage";
 import VerificationIdsPage from "@/pages/VerificationIdsPage";
 
+function LoadingScreen() {
+  return (
+    <div className="flex min-h-screen flex-col items-center justify-center gap-4" role="status">
+      <img src="/seatpass-mark.png" alt="" className="h-12 w-12 rounded-xl animate-pulse motion-reduce:animate-none" />
+      <p className="text-sm text-slate-600">Loading SeatPass Admin…</p>
+    </div>
+  );
+}
+
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { initialized, profile, loading } = useAuth();
   if (!initialized || loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <p className="text-sm text-slate-500">Loading...</p>
-      </div>
-    );
+    return <LoadingScreen />;
   }
   if (!profile || profile.role !== "admin") {
     return <Navigate to="/login" replace />;
@@ -41,11 +46,7 @@ function AdminRoutes() {
   const { initialized, loading } = useAuth();
 
   if (!initialized || loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <p className="text-sm text-slate-500">Loading...</p>
-      </div>
-    );
+    return <LoadingScreen />;
   }
 
   return (

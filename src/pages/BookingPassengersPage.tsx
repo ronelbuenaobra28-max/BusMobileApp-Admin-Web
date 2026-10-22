@@ -1,5 +1,6 @@
 "use client";
 
+import { StatusBadge } from "@/components/ui/status-badge";
 import { useState, useMemo } from "react";
 import { Search } from "lucide-react";
 import {
@@ -111,7 +112,7 @@ export default function BookingPassengersPage() {
 
         {!isLoading && !error && filtered.length > 0 && (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="data-table w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-100 text-left text-slate-500">
                   <th className="px-4 py-3">Passenger</th>
@@ -157,19 +158,7 @@ export default function BookingPassengersPage() {
                     <td className="px-4 py-3 text-slate-700">{row.bus_number || "—"}</td>
                     <td className="px-4 py-3 text-slate-700">{row.operator_name || "—"}</td>
                     <td className="px-4 py-3">
-                      <span
-                        className={`inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-medium ${
-                          row.booking_status === "paid"
-                            ? "border-transparent bg-emerald-100 text-emerald-700"
-                            : row.booking_status === "pending"
-                              ? "border-transparent bg-amber-100 text-amber-700"
-                              : row.booking_status === "cancelled"
-                                ? "border-transparent bg-red-100 text-red-700"
-                                : "border-transparent bg-slate-100 text-slate-700"
-                        }`}
-                      >
-                        {row.booking_status}
-                      </span>
+                      <StatusBadge status={row.booking_status} />
                     </td>
                   </tr>
                 ))}

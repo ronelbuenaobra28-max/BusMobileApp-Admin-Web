@@ -1,5 +1,6 @@
 "use client";
 
+import { StatusBadge } from "@/components/ui/status-badge";
 import { useParams, useNavigate } from "react-router-dom";
 import { useMemo } from "react";
 import { ArrowLeft } from "lucide-react";
@@ -65,11 +66,7 @@ export default function OperatorDetailPage() {
       <PageHeader
         title={operator.name}
         description={
-          <span className={`inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-medium ${
-            operator.active === "active" ? "border-transparent bg-emerald-100 text-emerald-700" : "border-transparent bg-slate-100 text-slate-700"
-          }`}>
-            {operator.active}
-          </span>
+          <StatusBadge status={operator.active} />
         }
         action={
           <Button variant="outline" onClick={() => navigate(-1)}>
@@ -112,7 +109,7 @@ export default function OperatorDetailPage() {
             <p className="text-sm text-slate-500">No buses assigned.</p>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="data-table w-full text-sm">
                 <thead>
                   <tr className="border-b border-slate-100 text-left text-slate-500">
                     <th className="px-3 py-2 font-medium">Bus #</th>
@@ -126,13 +123,7 @@ export default function OperatorDetailPage() {
                       <td className="px-3 py-2 text-slate-900">{b.bus_number}</td>
                       <td className="px-3 py-2 text-slate-900">{b.capacity}</td>
                       <td className="px-3 py-2">
-                        <span className={`inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-medium ${
-                          b.status === "active" ? "border-transparent bg-emerald-100 text-emerald-700" :
-                          b.status === "maintenance" ? "border-transparent bg-amber-100 text-amber-700" :
-                          "border-transparent bg-slate-100 text-slate-700"
-                        }`}>
-                          {b.status}
-                        </span>
+                        <StatusBadge status={b.status} />
                       </td>
                     </tr>
                   ))}

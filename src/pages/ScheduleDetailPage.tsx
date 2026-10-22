@@ -1,5 +1,6 @@
 "use client";
 
+import { StatusBadge } from "@/components/ui/status-badge";
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
@@ -141,13 +142,7 @@ export default function ScheduleDetailPage() {
             </div>
             <div>
               <p className="text-sm text-slate-500">Status</p>
-              <span className={`inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-medium ${
-                trip.status === "active" ? "border-transparent bg-emerald-100 text-emerald-700" :
-                trip.status === "cancelled" ? "border-transparent bg-red-100 text-red-700" :
-                "border-transparent bg-slate-100 text-slate-700"
-              }`}>
-                {trip.status}
-              </span>
+              <StatusBadge status={trip.status} />
             </div>
             <div>
               <p className="text-sm text-slate-500">Departure</p>

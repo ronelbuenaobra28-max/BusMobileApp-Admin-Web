@@ -1,5 +1,6 @@
 "use client";
 
+import { StatusBadge } from "@/components/ui/status-badge";
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Plus, Search, MoreVertical, Trash2 } from "lucide-react";
@@ -195,7 +196,7 @@ export default function DriversPage() {
 
         {!isLoading && !error && filtered && filtered.length > 0 && (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="data-table w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-100 text-left text-slate-500">
                   <th className="px-4 py-3 w-10">
@@ -235,11 +236,7 @@ export default function DriversPage() {
                     </td>
                     <td className="px-4 py-3 text-slate-700">{d.license_no}</td>
                     <td className="px-4 py-3">
-                      <span className={`inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-medium ${
-                        d.status === "available" ? "border-transparent bg-emerald-100 text-emerald-700" : "border-transparent bg-slate-100 text-slate-700"
-                      }`}>
-                        {d.status}
-                      </span>
+                      <StatusBadge status={d.status} />
                     </td>
                     <td className="px-4 py-3 text-right">
                       <DropdownMenu>

@@ -241,7 +241,7 @@ export default function RoutesPage() {
 
         {!isLoading && !error && filtered && filtered.length > 0 && (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="data-table w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-100 text-left text-slate-500">
                   <th className="px-4 py-3 w-10">
@@ -291,7 +291,7 @@ export default function RoutesPage() {
                            <span>{r.destination_terminal_name || 'Destination: Missing'}</span>
                          </div>
                        ) : (
-                         <span className="text-slate-400">Not configured</span>
+                         <span className="text-slate-500">Not configured</span>
                        )}
                      </td>
                      <td className="px-4 py-3 text-slate-700">

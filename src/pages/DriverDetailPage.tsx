@@ -1,9 +1,10 @@
 "use client";
 
+import { StatusBadge } from "@/components/ui/status-badge";
 import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { PageHeader, Button, Card, Skeleton } from "@/components/ui";
-import { useDrivers, useTrips, useRemoveDriver } from "@/lib/api-hooks";
+import { useDrivers, useRoutes, useTrips, useRemoveDriver } from "@/lib/api-hooks";
 import { toast } from "sonner";
 
 export default function DriverDetailPage() {
@@ -11,6 +12,11 @@ export default function DriverDetailPage() {
   const navigate = useNavigate();
   const { data: drivers, isLoading: loadingDrivers } = useDrivers();
   const { data: trips } = useTrips();
+  const { data: routes } = useRoutes();
+  const routeLabel = (routeId: string) => {
+    const r = routes?.find((route) => route.id === routeId);
+    return r ? `${r.origin} → ${r.destination}` : "Unknown route";
+  };
   const removeDriver = useRemoveDriver();
 
   const driver = drivers?.find((d) => d.id === id);
@@ -55,11 +61,7 @@ export default function DriverDetailPage() {
       <PageHeader
         title={driver.full_name}
         description={
-          <span className={`inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-medium ${
-            driver.status === "available" ? "border-transparent bg-emerald-100 text-emerald-700" : "border-transparent bg-slate-100 text-slate-700"
-          }`}>
-            {driver.status}
-          </span>
+          <StatusBadge status={driver.status} />
         }
         action={
           <div className="flex gap-2">
@@ -103,7 +105,7 @@ export default function DriverDetailPage() {
             <p className="text-sm text-slate-500">No trips assigned.</p>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="data-table w-full text-sm">
                 <thead>
                   <tr className="border-b border-slate-100 text-left text-slate-500">
                     <th className="px-3 py-2 font-medium">Route</th>
@@ -115,14 +117,12 @@ export default function DriverDetailPage() {
                 <tbody>
                   {driverTrips.map((t) => (
                     <tr key={t.id} className="border-b border-slate-100">
-                      <td className="px-3 py-2 text-slate-900">{t.route_id}</td>
+                      <td className="px-3 py-2 text-slate-900">{routeLabel(t.route_id)}</td>
                       <td className="px-3 py-2 text-slate-900">
                         {new Date(t.scheduled_departure).toLocaleString()}
                       </td>
                       <td className="px-3 py-2">
-                        <span className={`inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-medium border-transparent bg-slate-100 text-slate-700`}>
-                          {t.status}
-                        </span>
+                        <StatusBadge status={t.status} />
                       </td>
                       <td className="px-3 py-2 text-slate-900">{t.available_seats}</td>
                     </tr>
