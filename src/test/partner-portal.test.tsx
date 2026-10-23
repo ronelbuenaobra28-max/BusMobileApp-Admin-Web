@@ -164,7 +164,7 @@ describe("Partner sales page", () => {
     // Tile and table total both show the fares, not what passengers paid.
     expect(screen.getAllByText("₱2,250.00").length).toBeGreaterThanOrEqual(2);
     expect(screen.getAllByText("₱2,260.00").length).toBeGreaterThanOrEqual(1);
-    expect(screen.getByText(/SeatPass booking fee per transaction/)).toBeInTheDocument();
+    expect(screen.getByText(/SeatPass booking fee for each seat/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Export CSV/ })).toBeEnabled();
   });
 });
@@ -180,7 +180,7 @@ describe("Admin earnings page", () => {
     expect(screen.getAllByText("SeatPass earnings").length).toBeGreaterThanOrEqual(2);
     // Tile and table total.
     expect(screen.getAllByText("₱20.00").length).toBeGreaterThanOrEqual(2);
-    expect(screen.getByText(/× 4 paid reservations/)).toBeInTheDocument();
+    expect(screen.getByText(/per seat · 4 paid reservations/)).toBeInTheDocument();
     expect(screen.getAllByText("₱5,250.00").length).toBeGreaterThanOrEqual(2);
     expect(screen.getByText("Partas")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Export CSV/ })).toBeEnabled();

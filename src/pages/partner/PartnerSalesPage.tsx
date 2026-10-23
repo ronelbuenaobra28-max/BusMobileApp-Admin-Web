@@ -129,8 +129,8 @@ export default function PartnerSalesPage() {
       <div className="flex items-start gap-3 rounded-xl border border-primary-100 bg-primary-50/60 px-4 py-3 text-sm text-slate-700">
         <Info aria-hidden className="mt-0.5 h-4 w-4 shrink-0 text-primary-700" />
         <p>
-          Passengers pay your fare plus a {peso(5)} SeatPass booking fee per transaction. Your ticket sales are the
-          fares only. Refunds are payments returned because no ticket was issued, so they were never part of your
+          Passengers pay your fare plus a {peso(5)} SeatPass booking fee for each seat (bookings before the change
+          paid {peso(5)} per reservation). Your ticket sales are the fares only. Refunds are payments returned because no ticket was issued, so they were never part of your
           ticket sales. Dates follow Philippine time.
         </p>
       </div>

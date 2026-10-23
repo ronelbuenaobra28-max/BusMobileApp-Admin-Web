@@ -17,7 +17,7 @@ import { cn } from "@/lib/utils";
 const PREFERS_REDUCED_MOTION =
   typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 
-/** SeatPass's own money: the booking fee on each paid reservation, kept apart
+/** SeatPass's own money: the booking fee on each paid seat, kept apart
  *  from the fares that belong to the bus companies. */
 export default function EarningsPage() {
   const rangeState = useSalesRange();
@@ -98,7 +98,7 @@ export default function EarningsPage() {
           index={0}
           label="SeatPass earnings"
           value={peso(totals?.seatpass_earnings ?? 0)}
-          note={`${peso(fee)} × ${count(totals?.transactions ?? 0)} paid reservations`}
+          note={`${peso(fee)} per seat · ${count(totals?.transactions ?? 0)} paid reservations`}
           icon={PiggyBank}
           tone="emerald"
           loading={isLoading}
@@ -135,8 +135,8 @@ export default function EarningsPage() {
       <div className="flex items-start gap-3 rounded-xl border border-primary-100 bg-primary-50/60 px-4 py-3 text-sm text-slate-700">
         <Info aria-hidden className="mt-0.5 h-4 w-4 shrink-0 text-primary-700" />
         <p>
-          Each paid reservation is the fares plus a {peso(fee)} SeatPass booking fee. The fares belong to the bus
-          company and the fee is SeatPass's. These figures are before the payment provider's charges. Refunds are
+          Passengers pay the fares plus a {peso(fee)} SeatPass booking fee for each seat (reservations paid before the
+          per-seat fee were charged {peso(5)} once). The fares belong to the bus company and the fee is SeatPass's. These figures are before the payment provider's charges. Refunds are
           not counted in either share. Dates follow Philippine time.
         </p>
       </div>
