@@ -6,6 +6,7 @@ import { useMemo } from "react";
 import { ArrowLeft } from "lucide-react";
 import { PageHeader, Button, Card, Skeleton } from "@/components/ui";
 import { useOperators, useBuses, useRoutes, useTrips } from "@/lib/api-hooks";
+import { OperatorStaffCard } from "@/components/operators/OperatorStaffCard";
 
 export default function OperatorDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -101,6 +102,8 @@ export default function OperatorDetailPage() {
           </div>
         </Card>
       </div>
+
+      <OperatorStaffCard operatorId={operator.id} operatorName={operator.name} />
 
       <Card>
         <div className="p-6">

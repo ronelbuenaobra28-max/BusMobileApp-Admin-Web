@@ -1,32 +1,47 @@
 "use client";
 
-import { useState } from "react";
-import { Navigate, useNavigate } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
+import { Navigate } from "react-router-dom";
 import { AlertCircle, BarChart3, Eye, EyeOff, Loader2, Lock, Mail, ShieldCheck, Ticket } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { homePathFor } from "@/lib/roles";
 
 const HIGHLIGHTS = [
   { icon: BarChart3, text: "Live reservations, revenue and fleet status" },
-  { icon: Ticket, text: "Schedules, routes and booking passengers in one place" },
-  { icon: ShieldCheck, text: "Verification ID reviews and payment reconciliation" },
+  { icon: Ticket, text: "Bus companies: your bookings and ticket sales, any time" },
+  { icon: ShieldCheck, text: "Schedules, ID reviews and payment tools for SeatPass admins" },
 ];
 
 export default function LoginPage() {
-  const { login, profile, initialized, loading } = useAuth();
-  const navigate = useNavigate();
+  const { login, logout, profile, initialized, loading } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  // Already signed in as an admin: leave the login page (as an element, not a
-  // navigate() call during render).
-  if (initialized && !loading && profile && profile.role === "admin") {
-    return <Navigate to="/" replace />;
+  const home = profile ? homePathFor(profile.role) : null;
+  const signedOutWrongRole = useRef(false);
+
+  // Passenger and driver accounts belong in the mobile app: say so and sign
+  // them out instead of bouncing them back here silently.
+  useEffect(() => {
+    if (initialized && !loading && profile && !home && !signedOutWrongRole.current) {
+      signedOutWrongRole.current = true;
+      setError("This account is for the SeatPass mobile app. Sign in with a SeatPass admin or bus company account.");
+      void logout().finally(() => {
+        signedOutWrongRole.current = false;
+      });
+    }
+  }, [initialized, loading, profile, home, logout]);
+
+  // Signed in: go to this role's console (admins to /, bus company staff to
+  // /partner), as an element rather than a navigate() call during render.
+  if (initialized && !loading && home) {
+    return <Navigate to={home} replace />;
   }
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -34,8 +49,8 @@ export default function LoginPage() {
     setError(null);
     setSubmitting(true);
     try {
+      // Once the profile loads, the redirect above sends them to their console.
       await login(email, password);
-      navigate("/", { replace: true });
     } catch {
       setError("Invalid email or password");
     } finally {
@@ -57,7 +72,7 @@ export default function LoginPage() {
           <img src="/seatpass-mark.png" alt="" className="h-11 w-11 rounded-xl shadow-lg" />
           <div>
             <p className="text-lg font-semibold">SeatPass</p>
-            <p className="text-sm text-white/90">Admin console</p>
+            <p className="text-sm text-white/90">Admin &amp; Partner Portal</p>
           </div>
         </div>
         <div className="relative space-y-8 animate-in fade-in-0 slide-in-from-bottom-3 duration-700 motion-reduce:animate-none">
@@ -86,7 +101,7 @@ export default function LoginPage() {
             <span className="text-lg font-semibold text-slate-900">SeatPass Admin</span>
           </div>
           <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Welcome back</h1>
-          <p className="mt-1.5 text-sm text-slate-600">Sign in with your administrator account.</p>
+          <p className="mt-1.5 text-sm text-slate-600">Sign in with your SeatPass admin or bus company account.</p>
 
           <form onSubmit={handleSubmit} className="mt-8 space-y-5">
             {error && (

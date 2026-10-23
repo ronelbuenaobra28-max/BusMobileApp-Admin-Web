@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 
-export type UserRole = "admin" | "passenger" | "driver" | "unknown";
+export type UserRole = "admin" | "operator" | "passenger" | "driver" | "unknown";
 
 export interface AdminProfile {
   user_id: string;

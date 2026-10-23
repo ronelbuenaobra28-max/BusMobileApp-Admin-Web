@@ -1,6 +1,8 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import AdminLayout from "@/components/layout/AdminLayout";
+import PartnerLayout from "@/components/layout/PartnerLayout";
+import { homePathFor } from "@/lib/roles";
 import LoginPage from "@/pages/LoginPage";
 import DashboardPage from "@/pages/DashboardPage";
 import OperatorsPage from "@/pages/OperatorsPage";
@@ -21,23 +23,33 @@ import BookingPassengersPage from "@/pages/BookingPassengersPage";
 import TerminalsPage from "@/pages/TerminalsPage";
 import PaymentReconciliationPage from "@/pages/PaymentReconciliationPage";
 import VerificationIdsPage from "@/pages/VerificationIdsPage";
+import PartnerOverviewPage from "@/pages/partner/PartnerOverviewPage";
+import PartnerBookingsPage from "@/pages/partner/PartnerBookingsPage";
+import PartnerSalesPage from "@/pages/partner/PartnerSalesPage";
+import PartnerTripsPage from "@/pages/partner/PartnerTripsPage";
+import PartnerFleetPage from "@/pages/partner/PartnerFleetPage";
 
 function LoadingScreen() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-4" role="status">
       <img src="/seatpass-mark.png" alt="" className="h-12 w-12 rounded-xl animate-pulse motion-reduce:animate-none" />
-      <p className="text-sm text-slate-600">Loading SeatPass Admin…</p>
+      <p className="text-sm text-slate-600">Loading SeatPass…</p>
     </div>
   );
 }
 
-function ProtectedRoute({ children }: { children: React.ReactNode }) {
+/** Only `role` may see `children`; anyone else signed in is sent to their own
+ *  console (admins to /, operator staff to /partner), everyone else to login. */
+function ProtectedRoute({ role, children }: { role: "admin" | "operator"; children: React.ReactNode }) {
   const { initialized, profile, loading } = useAuth();
   if (!initialized || loading) {
     return <LoadingScreen />;
   }
-  if (!profile || profile.role !== "admin") {
+  if (!profile) {
     return <Navigate to="/login" replace />;
+  }
+  if (profile.role !== role) {
+    return <Navigate to={homePathFor(profile.role) ?? "/login"} replace />;
   }
   return <>{children}</>;
 }
@@ -55,7 +67,7 @@ function AdminRoutes() {
       <Route
         path="/"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute role="admin">
             <AdminLayout />
           </ProtectedRoute>
         }
@@ -79,6 +91,20 @@ function AdminRoutes() {
         <Route path="terminals" element={<TerminalsPage />} />
         <Route path="payments/reconciliation" element={<PaymentReconciliationPage />} />
         <Route path="verification-ids" element={<VerificationIdsPage />} />
+      </Route>
+      <Route
+        path="/partner"
+        element={
+          <ProtectedRoute role="operator">
+            <PartnerLayout />
+          </ProtectedRoute>
+        }
+      >
+        <Route index element={<PartnerOverviewPage />} />
+        <Route path="bookings" element={<PartnerBookingsPage />} />
+        <Route path="sales" element={<PartnerSalesPage />} />
+        <Route path="trips" element={<PartnerTripsPage />} />
+        <Route path="fleet" element={<PartnerFleetPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

@@ -48,6 +48,27 @@ Last update: 2026-10-22. The pages were checked rendered at 1440×900 and
 | List pages (all 14 tables) | 6 | 7–8 | Shared `data-table` style, `StatusBadge`, route names in Schedules, Bus detail and Driver detail; fixed a garbled "â€”" dash on Buses |
 | Forms, dialogs, detail pages | 6 | 7 | Inherit the tokens, focus rings and badges; layouts unchanged |
 
+## Partner Portal (2026-10-23)
+
+Bus company staff (role `operator`) sign in on the same `/login` and land on
+`/partner`; admins land on `/`. Each side redirects the wrong role away
+(`ProtectedRoute role=…`, `homePathFor` in `src/lib/roles.ts`).
+
+- **One shell, two consoles.** `AdminLayout` takes a `ConsoleConfig`
+  (`src/components/layout/console.ts`): nav, badge ("Admin" / "Partner"),
+  subtitle (company name) and whether the bell shows. Sidebar and header read
+  it with `useConsole()`; don't fork them.
+- **Pages** live in `src/pages/partner/` and use `usePartner*` hooks from
+  `src/lib/partner-hooks.ts`. They are view-only.
+- **Money wording.** "Ticket sales (your kita)" is fares only. The ₱5
+  SeatPass fee is shown separately as paid by passengers on top. Refunds sit
+  apart and are never subtracted from ticket sales. Formatters are in
+  `src/lib/format.ts` (`peso`, `dateTime`, Manila dates).
+- **Widgets.** `StatTile` and `LoadBar` (`src/components/partner/widgets.tsx`).
+  `LoadBar` turns amber at 85% or more.
+- **Staff accounts** are managed by admins on the operator's detail page
+  (`OperatorStaffCard`). The temporary password shows once.
+
 ## Next candidates
 
 - Show operator logos in the Operators and Buses tables.

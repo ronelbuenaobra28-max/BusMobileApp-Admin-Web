@@ -304,3 +304,125 @@ export interface VerificationSubmission {
   reviewed_by_email: string | null;
   rejection_reason: string | null;
 }
+
+// --------------------------------------------------------------------------
+// Partner Portal (bus company staff). Money is in PHP; "ticket sales" are the
+// fares the operator earns: what passengers paid minus SeatPass's booking fee.
+// --------------------------------------------------------------------------
+export interface OperatorStaff {
+  user_id: string;
+  email: string | null;
+  first_name: string;
+  last_name: string;
+  created_at: string;
+}
+
+export interface OperatorStaffCreated extends OperatorStaff {
+  /** Shown once to the admin; never returned again. */
+  temporary_password: string;
+}
+
+export interface PartnerMe {
+  operator_id: string;
+  operator_name: string;
+  operator_logo_url: string | null;
+  first_name: string;
+  last_name: string;
+  email: string | null;
+}
+
+export interface PartnerUpcomingTrip {
+  id: string;
+  scheduled_departure: string;
+  status: string;
+  origin: string;
+  destination: string;
+  bus_number: string;
+  capacity: number;
+  seats_sold: number;
+}
+
+export interface PartnerOverview {
+  today_bookings: number;
+  today_ticket_sales: number;
+  month_ticket_sales: number;
+  month_bookings: number;
+  month_seats_sold: number;
+  next7_seats_sold: number;
+  next7_capacity: number;
+  daily: { date: string; ticket_sales: number; bookings: number }[];
+  upcoming: PartnerUpcomingTrip[];
+}
+
+export interface PartnerBooking {
+  reference: string;
+  booked_at: string;
+  status: string;
+  seats: string;
+  seat_count: number;
+  passengers: string;
+  trip_id: string;
+  scheduled_departure: string;
+  origin: string;
+  destination: string;
+  bus_number: string;
+  amount_paid: number | null;
+  ticket_sales: number | null;
+}
+
+export interface PartnerBookingPage {
+  items: PartnerBooking[];
+  total: number;
+}
+
+export interface PartnerSalesRow {
+  period: string;
+  transactions: number;
+  seats: number;
+  collected: number;
+  seatpass_fees: number;
+  ticket_sales: number;
+  refunded_count: number;
+  refunded_amount: number;
+}
+
+export interface PartnerSalesReport {
+  date_from: string;
+  date_to: string;
+  group: "day" | "month";
+  rows: PartnerSalesRow[];
+  totals: PartnerSalesRow;
+}
+
+export interface PartnerTrip {
+  id: string;
+  scheduled_departure: string;
+  arrival_time: string | null;
+  status: string;
+  origin: string;
+  destination: string;
+  bus_number: string;
+  capacity: number;
+  seats_sold: number;
+  boarded: number;
+  ticket_sales: number;
+  driver_name: string | null;
+}
+
+export interface PartnerFleet {
+  buses: {
+    id: string;
+    bus_number: string;
+    capacity: number;
+    status: string;
+    seating_layout: string | null;
+    upcoming_trips: number;
+  }[];
+  drivers: {
+    id: string;
+    full_name: string;
+    license_no: string;
+    status: string;
+    last_trip_at: string | null;
+  }[];
+}

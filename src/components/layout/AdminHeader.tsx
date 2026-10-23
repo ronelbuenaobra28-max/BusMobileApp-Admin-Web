@@ -6,13 +6,17 @@ import { useAuth } from "@/contexts/AuthContext";
 import { SidebarContent } from "./AdminSidebar";
 import { displayName, initials } from "./user-display";
 import { groupOf, navItemFor } from "./nav";
+import { useConsole } from "./console";
 
 export default function AdminHeader() {
   const { profile } = useAuth();
   const { pathname } = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const current = navItemFor(pathname);
-  const group = current ? groupOf(current) : undefined;
+  const { nav, showNotifications, subtitle } = useConsole();
+  const current = navItemFor(pathname, nav);
+  const groupOfCurrent = current ? groupOf(current, nav) : undefined;
+  // Skip "Overview › Overview" when the group and page share a name.
+  const group = groupOfCurrent?.label === current?.label ? undefined : groupOfCurrent;
   // Deeper than the nav entry (e.g. /buses/123) = a detail page.
   const isDetail = !!current && pathname !== current.to;
   const name = displayName(profile);
@@ -67,18 +71,20 @@ export default function AdminHeader() {
       </div>
 
       <div className="flex items-center gap-2">
-        <NavLink
-          to="/notifications"
-          title="Notifications"
-          aria-label="Notifications"
-          className="rounded-md p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          <Bell className="h-5 w-5" />
-        </NavLink>
+        {showNotifications && (
+          <NavLink
+            to="/notifications"
+            title="Notifications"
+            aria-label="Notifications"
+            className="rounded-md p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <Bell className="h-5 w-5" />
+          </NavLink>
+        )}
         <div className="hidden items-center gap-3 border-l border-slate-200 pl-3 md:flex">
           <div className="text-right">
             <p className="text-sm font-medium text-slate-900">{name}</p>
-            <p className="text-xs capitalize text-slate-500">{profile?.role ?? "admin"}</p>
+            <p className="text-xs text-slate-500">{subtitle ?? (profile?.role === "admin" ? "Admin" : profile?.role)}</p>
           </div>
           <div
             aria-hidden

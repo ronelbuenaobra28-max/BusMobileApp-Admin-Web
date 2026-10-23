@@ -1,16 +1,21 @@
+import { useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
-import { LogOut } from "lucide-react";
+import { KeyRound, LogOut } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
-import { NAV_GROUPS } from "./nav";
+import { useConsole } from "./console";
+import { ChangePasswordDialog } from "./ChangePasswordDialog";
 import { displayName, initials } from "./user-display";
 
-/** Logo, grouped navigation and the signed-in admin; shared by the desktop
- *  sidebar and the mobile drawer. */
+/** Logo, grouped navigation and the signed-in user; shared by the desktop
+ *  sidebar and the mobile drawer, for the admin console and the Partner
+ *  Portal alike (see console.ts). */
 export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const { logout, profile } = useAuth();
+  const { nav, badge, subtitle } = useConsole();
   const navigate = useNavigate();
   const name = displayName(profile);
+  const [passwordOpen, setPasswordOpen] = useState(false);
 
   const handleLogout = async () => {
     await logout();
@@ -23,12 +28,12 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         <img src="/seatpass-mark.png" alt="" className="h-8 w-8 rounded-lg" />
         <span className="text-base font-semibold text-slate-900">SeatPass</span>
         <span className="rounded-full bg-primary-50 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-primary-800 ring-1 ring-inset ring-primary-600/20">
-          Admin
+          {badge}
         </span>
       </div>
 
       <nav className="flex-1 space-y-5 overflow-y-auto px-3 py-4" aria-label="Main">
-        {NAV_GROUPS.map((group) => (
+        {nav.map((group) => (
           <div key={group.label}>
             <p className="mb-1.5 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
               {group.label}
@@ -38,7 +43,7 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
                 <NavLink
                   key={item.to}
                   to={item.to}
-                  end={item.to === "/"}
+                  end={item.end}
                   onClick={onNavigate}
                   className={({ isActive }) =>
                     cn(
@@ -84,8 +89,16 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
           </div>
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-medium text-slate-900">{name}</p>
-            <p className="truncate text-xs text-slate-500">{profile?.email ?? "Administrator"}</p>
+            <p className="truncate text-xs text-slate-500">{subtitle ?? profile?.email ?? "Administrator"}</p>
           </div>
+          <button
+            onClick={() => setPasswordOpen(true)}
+            title="Change password"
+            aria-label="Change password"
+            className="rounded-md p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <KeyRound className="h-4 w-4" />
+          </button>
           <button
             onClick={handleLogout}
             title="Log out"
@@ -96,6 +109,7 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
           </button>
         </div>
       </div>
+      <ChangePasswordDialog open={passwordOpen} onOpenChange={setPasswordOpen} />
     </div>
   );
 }

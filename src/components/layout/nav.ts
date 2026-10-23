@@ -1,4 +1,5 @@
 import {
+  BarChart3,
   Bell,
   Bus,
   CalendarDays,
@@ -8,6 +9,7 @@ import {
   ReceiptText,
   Route,
   Settings,
+  Ticket,
   User,
   UserCog,
   Users,
@@ -19,6 +21,8 @@ export interface NavItem {
   to: string;
   icon: LucideIcon;
   label: string;
+  /** Match the path exactly (for a console's home page). */
+  end?: boolean;
 }
 
 export interface NavGroup {
@@ -26,12 +30,12 @@ export interface NavGroup {
   items: NavItem[];
 }
 
-/** The one source for the sidebar, the mobile drawer and the header title. */
-export const NAV_GROUPS: NavGroup[] = [
+/** Admin console menu: the sidebar, mobile drawer and breadcrumb read it. */
+export const ADMIN_NAV: NavGroup[] = [
   {
     label: "Overview",
     items: [
-      { to: "/", icon: LayoutDashboard, label: "Dashboard" },
+      { to: "/", icon: LayoutDashboard, label: "Dashboard", end: true },
     ],
   },
   {
@@ -73,19 +77,42 @@ export const NAV_GROUPS: NavGroup[] = [
   },
 ];
 
-const ALL_ITEMS = NAV_GROUPS.flatMap((g) => g.items);
+/** Partner Portal menu (bus company staff; read-only pages). */
+export const PARTNER_NAV: NavGroup[] = [
+  {
+    label: "Overview",
+    items: [
+      { to: "/partner", icon: LayoutDashboard, label: "Overview", end: true },
+    ],
+  },
+  {
+    label: "Reservations",
+    items: [
+      { to: "/partner/bookings", icon: Ticket, label: "Bookings" },
+      { to: "/partner/trips", icon: CalendarDays, label: "Trips" },
+    ],
+  },
+  {
+    label: "Business",
+    items: [
+      { to: "/partner/sales", icon: BarChart3, label: "Sales" },
+      { to: "/partner/fleet", icon: Bus, label: "Fleet" },
+    ],
+  },
+];
 
 /** The nav group a nav item sits in. */
-export function groupOf(item: NavItem): NavGroup | undefined {
-  return NAV_GROUPS.find((g) => g.items.includes(item));
+export function groupOf(item: NavItem, groups: NavGroup[]): NavGroup | undefined {
+  return groups.find((g) => g.items.includes(item));
 }
 
 /** The nav entry a path belongs to: exact match first, then the longest prefix
  *  (so /buses/123 resolves to Buses). */
-export function navItemFor(pathname: string): NavItem | undefined {
-  const exact = ALL_ITEMS.find((i) => i.to === pathname);
+export function navItemFor(pathname: string, groups: NavGroup[]): NavItem | undefined {
+  const items = groups.flatMap((g) => g.items);
+  const exact = items.find((i) => i.to === pathname);
   if (exact) return exact;
-  return ALL_ITEMS.filter((i) => i.to !== "/" && pathname.startsWith(`${i.to}/`)).sort(
-    (a, b) => b.to.length - a.to.length,
-  )[0];
+  return items
+    .filter((i) => i.to !== "/" && pathname.startsWith(`${i.to}/`))
+    .sort((a, b) => b.to.length - a.to.length)[0];
 }
