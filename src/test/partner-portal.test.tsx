@@ -43,6 +43,24 @@ vi.mock("@/lib/partner-hooks", () => ({
       totals: { period: "2026-10-01", transactions: 2, seats: 3, collected: 2260, seatpass_fees: 10, ticket_sales: 2250, refunded_count: 1, refunded_amount: 755 },
     },
   }),
+  useAdminEarnings: () => ({
+    isLoading: false,
+    isFetching: false,
+    error: null,
+    refetch: vi.fn(),
+    data: {
+      date_from: "2026-10-01",
+      date_to: "2026-10-23",
+      group: "day",
+      platform_fee: 5,
+      rows: [{ period: "2026-10-22", transactions: 4, seats: 7, collected: 5270, operator_share: 5250, seatpass_earnings: 20, refunded_count: 0, refunded_amount: 0 }],
+      totals: { transactions: 4, seats: 7, collected: 5270, operator_share: 5250, seatpass_earnings: 20, refunded_count: 1, refunded_amount: 755 },
+      by_operator: [
+        { operator_id: "a", operator_name: "Victory Liner", transactions: 3, seats: 4, collected: 3015, operator_share: 3000, seatpass_earnings: 15, refunded_count: 1, refunded_amount: 755 },
+        { operator_id: "b", operator_name: "Partas", transactions: 1, seats: 3, collected: 2255, operator_share: 2250, seatpass_earnings: 5, refunded_count: 0, refunded_amount: 0 },
+      ],
+    },
+  }),
   useOperatorStaff: () => ({ data: staffList, isLoading: false, error: null }),
   useCreateOperatorStaff: () => ({ mutateAsync: createStaff, isPending: false }),
   useRemoveOperatorStaff: () => ({ mutateAsync: removeStaff, isPending: false }),
@@ -147,6 +165,24 @@ describe("Partner sales page", () => {
     expect(screen.getAllByText("₱2,250.00").length).toBeGreaterThanOrEqual(2);
     expect(screen.getAllByText("₱2,260.00").length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText(/SeatPass booking fee per transaction/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Export CSV/ })).toBeEnabled();
+  });
+});
+
+describe("Admin earnings page", () => {
+  it("shows SeatPass's fee apart from the fares owed to companies", async () => {
+    const { default: EarningsPage } = await import("@/pages/EarningsPage");
+    render(
+      <MemoryRouter>
+        <EarningsPage />
+      </MemoryRouter>,
+    );
+    expect(screen.getAllByText("SeatPass earnings").length).toBeGreaterThanOrEqual(2);
+    // Tile and table total.
+    expect(screen.getAllByText("₱20.00").length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByText(/× 4 paid reservations/)).toBeInTheDocument();
+    expect(screen.getAllByText("₱5,250.00").length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByText("Partas")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Export CSV/ })).toBeEnabled();
   });
 });

@@ -1,6 +1,7 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api-client";
 import type {
+  EarningsReport,
   OperatorStaff,
   OperatorStaffCreated,
   PartnerBookingPage,
@@ -103,5 +104,16 @@ export function useRemoveOperatorStaff(operatorId: string) {
   return useMutation({
     mutationFn: (userId: string) => api.del<void>(`/api/admin/operators/${operatorId}/staff/${userId}`),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["admin", "operators", operatorId, "staff"] }),
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Admin: SeatPass earnings across every company
+// ---------------------------------------------------------------------------
+export function useAdminEarnings(range: { date_from: string; date_to: string; group: "day" | "month" }) {
+  return useQuery({
+    queryKey: ["admin", "earnings", range],
+    queryFn: () => api.get<EarningsReport>(`/api/admin/earnings${qs(range)}`),
+    placeholderData: keepPreviousData,
   });
 }

@@ -300,9 +300,9 @@ export default function DashboardPage() {
         />
         <StatCard
           index={1}
-          label="Revenue"
+          label="Collected from passengers"
           value={formatCurrency(totalRevenue)}
-          note={`Paid in ${selectedYear}`}
+          note={`Fares + SeatPass fees in ${selectedYear}`}
           icon={Wallet}
           tone="emerald"
           loading={revenueLoading}
@@ -431,7 +431,7 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
         <Card className="xl:col-span-2">
           <CardHeader className="pb-2">
-            <SectionTitle title="Revenue" subtitle={`Monthly paid revenue in ${selectedYear}`} />
+            <SectionTitle title="Collected from passengers" subtitle={`Monthly payments in ${selectedYear}, fares included`} />
           </CardHeader>
           <CardContent>
             {revenueLoading ? (
@@ -463,7 +463,7 @@ export default function DashboardPage() {
                     />
                     <Tooltip
                       cursor={{ fill: "rgba(13, 148, 136, 0.06)" }}
-                      formatter={(value: number) => [formatCurrency(value), "Revenue"]}
+                      formatter={(value: number) => [formatCurrency(value), "Collected"]}
                       contentStyle={TOOLTIP_STYLE}
                     />
                     <Bar
@@ -471,7 +471,7 @@ export default function DashboardPage() {
                       fill={CHART_TEAL_DARK}
                       radius={[6, 6, 0, 0]}
                       maxBarSize={36}
-                      name="Revenue"
+                      name="Collected"
                       isAnimationActive={!PREFERS_REDUCED_MOTION}
                       animationDuration={800}
                     />

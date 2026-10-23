@@ -426,3 +426,33 @@ export interface PartnerFleet {
     last_trip_at: string | null;
   }[];
 }
+
+// Admin earnings: fares owed to bus companies vs SeatPass's booking fee.
+export interface EarningsFigures {
+  transactions: number;
+  seats: number;
+  collected: number;
+  operator_share: number;
+  seatpass_earnings: number;
+  refunded_count: number;
+  refunded_amount: number;
+}
+
+export interface EarningsRow extends EarningsFigures {
+  period: string;
+}
+
+export interface OperatorEarnings extends EarningsFigures {
+  operator_id: string | null;
+  operator_name: string;
+}
+
+export interface EarningsReport {
+  date_from: string;
+  date_to: string;
+  group: "day" | "month";
+  platform_fee: number;
+  rows: EarningsRow[];
+  totals: EarningsFigures;
+  by_operator: OperatorEarnings[];
+}

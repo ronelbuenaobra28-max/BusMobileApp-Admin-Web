@@ -23,6 +23,7 @@ import BookingPassengersPage from "@/pages/BookingPassengersPage";
 import TerminalsPage from "@/pages/TerminalsPage";
 import PaymentReconciliationPage from "@/pages/PaymentReconciliationPage";
 import VerificationIdsPage from "@/pages/VerificationIdsPage";
+import EarningsPage from "@/pages/EarningsPage";
 import PartnerOverviewPage from "@/pages/partner/PartnerOverviewPage";
 import PartnerBookingsPage from "@/pages/partner/PartnerBookingsPage";
 import PartnerSalesPage from "@/pages/partner/PartnerSalesPage";
@@ -89,6 +90,7 @@ function AdminRoutes() {
         <Route path="settings" element={<SettingsPage />} />
         <Route path="booking-passengers" element={<BookingPassengersPage />} />
         <Route path="terminals" element={<TerminalsPage />} />
+        <Route path="earnings" element={<EarningsPage />} />
         <Route path="payments/reconciliation" element={<PaymentReconciliationPage />} />
         <Route path="verification-ids" element={<VerificationIdsPage />} />
       </Route>

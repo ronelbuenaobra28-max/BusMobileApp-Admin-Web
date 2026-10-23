@@ -1,57 +1,26 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { BarChart3, Download, Info, ReceiptText, Undo2, Wallet } from "lucide-react";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
 import { StatTile } from "@/components/partner/widgets";
+import { RangeControls } from "@/components/partner/RangeControls";
+import { useSalesRange } from "@/components/partner/sales-range";
 import { usePartnerMe, usePartnerSales } from "@/lib/partner-hooks";
-import { addDays, compact, count, dayLabel, downloadCsv, manilaToday, monthLabel, peso } from "@/lib/format";
+import { compact, count, dayLabel, downloadCsv, monthLabel, peso } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 const PREFERS_REDUCED_MOTION =
   typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 
-type Preset = "7d" | "30d" | "month" | "lastMonth" | "year" | "custom";
-
-function presetRange(preset: Exclude<Preset, "custom">): { from: string; to: string } {
-  const today = manilaToday();
-  const [y, m] = today.split("-").map(Number);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  switch (preset) {
-    case "7d":
-      return { from: addDays(today, -6), to: today };
-    case "30d":
-      return { from: addDays(today, -29), to: today };
-    case "month":
-      return { from: `${y}-${pad(m)}-01`, to: today };
-    case "lastMonth": {
-      const firstThis = `${y}-${pad(m)}-01`;
-      const lastPrev = addDays(firstThis, -1);
-      return { from: `${lastPrev.slice(0, 7)}-01`, to: lastPrev };
-    }
-    case "year":
-      return { from: `${y}-01-01`, to: today };
-  }
-}
-
-const PRESETS: { value: Exclude<Preset, "custom">; label: string }[] = [
-  { value: "7d", label: "Last 7 days" },
-  { value: "30d", label: "Last 30 days" },
-  { value: "month", label: "This month" },
-  { value: "lastMonth", label: "Last month" },
-  { value: "year", label: "This year" },
-];
-
 export default function PartnerSalesPage() {
   const { data: me } = usePartnerMe();
-  const [preset, setPreset] = useState<Preset>("30d");
-  const [range, setRange] = useState(() => presetRange("30d"));
-  const [group, setGroup] = useState<"day" | "month">("day");
+  const rangeState = useSalesRange();
+  const { range, group } = rangeState;
   const { data, isLoading, isFetching, error, refetch } = usePartnerSales({
     date_from: range.from,
     date_to: range.to,
@@ -59,12 +28,6 @@ export default function PartnerSalesPage() {
   });
   const periodLabel = (p: string) => (group === "month" ? monthLabel(p) : dayLabel(p, true));
   const totals = data?.totals;
-
-  const choosePreset = (p: Exclude<Preset, "custom">) => {
-    setPreset(p);
-    setRange(presetRange(p));
-    if (p === "year") setGroup("month");
-  };
 
   const chartData = useMemo(() => data?.rows ?? [], [data]);
 
@@ -120,63 +83,7 @@ export default function PartnerSalesPage() {
         }
       />
 
-      <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-        <div className="flex flex-wrap gap-2" role="group" aria-label="Date range">
-          {PRESETS.map((p) => (
-            <Button
-              key={p.value}
-              size="sm"
-              variant={preset === p.value ? "default" : "outline"}
-              className={cn(preset !== p.value && "bg-white")}
-              aria-pressed={preset === p.value}
-              onClick={() => choosePreset(p.value)}
-            >
-              {p.label}
-            </Button>
-          ))}
-        </div>
-        <div className="flex flex-wrap items-center gap-2 text-sm text-slate-600">
-          <Input
-            type="date"
-            aria-label="From"
-            className="w-[150px] bg-white"
-            value={range.from}
-            max={range.to}
-            onChange={(e) => {
-              setPreset("custom");
-              setRange((r) => ({ ...r, from: e.target.value }));
-            }}
-          />
-          <span>to</span>
-          <Input
-            type="date"
-            aria-label="To"
-            className="w-[150px] bg-white"
-            value={range.to}
-            min={range.from}
-            onChange={(e) => {
-              setPreset("custom");
-              setRange((r) => ({ ...r, to: e.target.value }));
-            }}
-          />
-          <div className="ml-1 inline-flex rounded-md border border-slate-200 bg-white p-0.5" role="group" aria-label="Group by">
-            {(["day", "month"] as const).map((g) => (
-              <button
-                key={g}
-                type="button"
-                aria-pressed={group === g}
-                onClick={() => setGroup(g)}
-                className={cn(
-                  "rounded px-3 py-1 text-sm font-medium transition-colors",
-                  group === g ? "bg-primary text-white" : "text-slate-600 hover:bg-slate-100",
-                )}
-              >
-                By {g}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
+      <RangeControls state={rangeState} />
 
       {error && <ErrorState title="Couldn't load sales" message={error.message} onRetry={() => void refetch()} />}
 

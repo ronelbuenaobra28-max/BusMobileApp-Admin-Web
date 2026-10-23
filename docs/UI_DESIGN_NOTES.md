@@ -69,6 +69,15 @@ Bus company staff (role `operator`) sign in on the same `/login` and land on
 - **Staff accounts** are managed by admins on the operator's detail page
   (`OperatorStaffCard`). The temporary password shows once.
 
+## Earnings (2026-10-23)
+
+`/earnings` (Finance) is SeatPass's own income: the booking fee per paid
+reservation, beside "Collected from passengers" and "Fares owed to bus
+companies", with a per-company table and CSV. The dashboard's old "Revenue"
+tile was everything passengers paid, so it now reads "Collected from
+passengers". The date range controls are shared with the partner Sales page
+(`RangeControls` + `useSalesRange` in `src/components/partner/`).
+
 ## Next candidates
 
 - Show operator logos in the Operators and Buses tables.

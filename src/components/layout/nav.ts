@@ -6,6 +6,7 @@ import {
   IdCard,
   LayoutDashboard,
   MapPin,
+  PiggyBank,
   ReceiptText,
   Route,
   Settings,
@@ -65,6 +66,7 @@ export const ADMIN_NAV: NavGroup[] = [
   {
     label: "Finance",
     items: [
+      { to: "/earnings", icon: PiggyBank, label: "Earnings" },
       { to: "/payments/reconciliation", icon: ReceiptText, label: "Reconciliation" },
     ],
   },
