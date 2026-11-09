@@ -61,10 +61,21 @@ export const addDays = (ymd: string, days: number) => {
   return dt.toISOString().slice(0, 10);
 };
 
+/** One quoted CSV cell. Text that a spreadsheet would run as a formula
+ *  (starting with = + - @, a tab or a carriage return), such as a company
+ *  name, gets a leading apostrophe so Excel and Sheets show it as text.
+ *  Numbers, including negative amounts like "-5.00", are left alone. */
+export function csvCell(v: string | number): string {
+  let text = String(v);
+  if (typeof v === "string" && /^[=+\-@\t\r]/.test(text) && !/^-?\d+(\.\d+)?$/.test(text)) {
+    text = `'${text}`;
+  }
+  return `"${text.replace(/"/g, '""')}"`;
+}
+
 /** Download rows as a CSV file (quotes every cell; Excel-friendly BOM). */
 export function downloadCsv(filename: string, header: string[], rows: (string | number)[][]) {
-  const escape = (v: string | number) => `"${String(v).replace(/"/g, '""')}"`;
-  const body = [header, ...rows].map((r) => r.map(escape).join(",")).join("\r\n");
+  const body = [header, ...rows].map((r) => r.map(csvCell).join(",")).join("\r\n");
   const blob = new Blob(["﻿" + body], { type: "text/csv;charset=utf-8" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
