@@ -5,7 +5,8 @@ import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { PageHeader, Button, Card, Skeleton, Input, ConfirmDialog } from "@/components/ui";
-import { useTrip, useUpdateTrip, useCancelTrip, useRoutes, useDrivers } from "@/lib/api-hooks";
+import { useTrip, useUpdateTrip, useCancelTrip, useRoutes, useDrivers, useBuses } from "@/lib/api-hooks";
+import { checkTripNumbers, isoFromManilaInput, manilaInputFromIso, type TripNumberErrors } from "@/lib/trip-form";
 import { toast } from "sonner";
 
 export default function ScheduleDetailPage() {
@@ -14,6 +15,7 @@ export default function ScheduleDetailPage() {
   const { data: trip, isLoading: tripLoading, error, refetch } = useTrip(id || "");
   const { data: routes } = useRoutes();
   const { data: drivers } = useDrivers();
+  const { data: buses } = useBuses();
   const updateTrip = useUpdateTrip();
   const cancelTrip = useCancelTrip();
   const [editing, setEditing] = useState(false);
@@ -23,11 +25,13 @@ export default function ScheduleDetailPage() {
     scheduled_departure: "",
     status: "",
   });
+  const [errors, setErrors] = useState<TripNumberErrors & { scheduled_departure?: string }>({});
   const [submitting, setSubmitting] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
   const route = routes?.find((r) => r.id === trip?.route_id);
   const driver = drivers?.find((d) => d.id === trip?.driver_id);
+  const busCapacity = buses?.find((b) => b.id === trip?.bus_id)?.capacity;
 
   if (tripLoading) {
     return (
@@ -62,28 +66,44 @@ export default function ScheduleDetailPage() {
     );
   }
 
+  // The form as first shown, so a save sends only what the admin changed:
+  // untouched fields are never rewritten and passengers are only notified
+  // of real changes.
+  const initialForm = () => ({
+    price: String(trip.price),
+    available_seats: String(trip.available_seats),
+    scheduled_departure: manilaInputFromIso(trip.scheduled_departure),
+    status: trip.status,
+  });
+
   const openEdit = () => {
     setEditing(true);
-    setForm({
-      price: String(trip.price),
-      available_seats: String(trip.available_seats),
-      scheduled_departure: trip.scheduled_departure.slice(0, 16),
-      status: trip.status,
-    });
+    setErrors({});
+    setForm(initialForm());
   };
 
   const doSave = async () => {
+    const next: typeof errors = checkTripNumbers(form.price, form.available_seats, busCapacity);
+    if (!form.scheduled_departure) next.scheduled_departure = "Set a departure date/time.";
+    setErrors(next);
+    if (Object.keys(next).length > 0) return;
+
+    const start = initialForm();
+    const body: Record<string, string | number> = {};
+    if (form.price !== start.price) body.price = Number(form.price);
+    if (form.available_seats !== start.available_seats) body.available_seats = Number(form.available_seats);
+    if (form.scheduled_departure !== start.scheduled_departure) {
+      body.scheduled_departure = isoFromManilaInput(form.scheduled_departure);
+    }
+    if (form.status !== start.status) body.status = form.status;
+    if (Object.keys(body).length === 0) {
+      setEditing(false);
+      return;
+    }
+
     setSubmitting(true);
     try {
-      await updateTrip.mutateAsync({
-        id: trip.id,
-        body: {
-          price: Number(form.price),
-          available_seats: Number(form.available_seats),
-          scheduled_departure: new Date(form.scheduled_departure).toISOString(),
-          status: form.status,
-        },
-      });
+      await updateTrip.mutateAsync({ id: trip.id, body });
       toast.success("Trip updated");
       setEditing(false);
     } catch {
@@ -187,17 +207,21 @@ export default function ScheduleDetailPage() {
                 )}
               </>
             ) : (
-              <form onSubmit={(e) => { e.preventDefault(); void doSave(); }} className="flex flex-col gap-4">
+              <form noValidate onSubmit={(e) => { e.preventDefault(); void doSave(); }} className="flex flex-col gap-4">
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-slate-700">Price</label>
                     <Input
                       type="number"
+                      min={0}
+                      step="0.01"
                       value={form.price}
+                      aria-invalid={!!errors.price}
                       onChange={(e) =>
                         setForm({ ...form, price: e.target.value })
                       }
                     />
+                    {errors.price && <p className="text-xs text-red-600">{errors.price}</p>}
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-slate-700">
@@ -205,23 +229,32 @@ export default function ScheduleDetailPage() {
                     </label>
                     <Input
                       type="number"
+                      min={0}
+                      step={1}
+                      max={busCapacity}
                       value={form.available_seats}
+                      aria-invalid={!!errors.available_seats}
                       onChange={(e) =>
                         setForm({ ...form, available_seats: e.target.value })
                       }
                     />
+                    {errors.available_seats && <p className="text-xs text-red-600">{errors.available_seats}</p>}
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-slate-700">
-                      Departure
+                      Departure (Philippine time)
                     </label>
                     <Input
                       type="datetime-local"
                       value={form.scheduled_departure}
+                      aria-invalid={!!errors.scheduled_departure}
                       onChange={(e) =>
                         setForm({ ...form, scheduled_departure: e.target.value })
                       }
                     />
+                    {errors.scheduled_departure && (
+                      <p className="text-xs text-red-600">{errors.scheduled_departure}</p>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-slate-700">Status</label>
@@ -236,8 +269,15 @@ export default function ScheduleDetailPage() {
                       <option value="onboarding">Onboarding</option>
                       <option value="active">Active</option>
                       <option value="completed">Completed</option>
-                      <option value="cancelled">Cancelled</option>
+                      {/* Cancelling refunds and releases every booking, so it
+                          only happens through the confirmed Cancel button. */}
+                      {trip.status === "cancelled" && (
+                        <option value="cancelled" disabled>
+                          Cancelled
+                        </option>
+                      )}
                     </select>
+                    <p className="text-xs text-slate-500">To cancel this trip, use the Cancel button.</p>
                   </div>
                 </div>
                 <div className="flex gap-2">

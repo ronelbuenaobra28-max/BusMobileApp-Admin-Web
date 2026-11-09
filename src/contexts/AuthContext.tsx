@@ -1,4 +1,5 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 
 export type UserRole = "admin" | "operator" | "passenger" | "driver" | "unknown";
@@ -34,12 +35,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<AdminProfile | null>(null);
   const [initialized, setInitialized] = useState(false);
   const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
+  // Who the cached API data belongs to. When the signed-in user changes (or
+  // signs out), the cache is wiped so the next person never sees it.
+  const cacheOwner = useRef<string | null>(null);
+  // Only the latest /me request may set the profile; an older one that
+  // resolves after a logout must not bring the previous user back.
+  const refreshSeq = useRef(0);
+
+  const resetCacheFor = (userId: string | null) => {
+    if (cacheOwner.current !== userId) {
+      queryClient.clear();
+      cacheOwner.current = userId;
+    }
+  };
 
   const refreshProfile = async () => {
+    const seq = ++refreshSeq.current;
+    const isLatest = () => seq === refreshSeq.current;
     try {
       const {
         data: { session },
       } = await supabase.auth.getSession();
+      if (!isLatest()) return;
+      resetCacheFor(session?.user.id ?? null);
       if (!session) {
         setProfile(null);
         return;
@@ -47,6 +66,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || ""}/api/auth/me`, {
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
+      if (!isLatest()) return;
       if (!response.ok) {
         setProfile(null);
         return;
@@ -58,6 +78,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         first_name?: string;
         last_name?: string;
       };
+      if (!isLatest()) return;
       setProfile({
         user_id: data.id,
         role: (data.role as UserRole) ?? "unknown",
@@ -66,10 +87,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         last_name: data.last_name,
       });
     } catch {
-      setProfile(null);
+      if (isLatest()) setProfile(null);
     } finally {
-      setLoading(false);
-      setInitialized(true);
+      if (isLatest()) {
+        setLoading(false);
+        setInitialized(true);
+      }
     }
   };
 
@@ -78,13 +101,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(() => {
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      resetCacheFor(session?.user.id ?? null);
       void refreshProfile();
     });
 
     return () => {
       subscription.unsubscribe();
     };
+    // Subscribe once. The helpers only use refs, setters and the query client.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const login = async (email: string, password: string) => {
@@ -100,7 +126,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logout = async () => {
+    refreshSeq.current++; // drop any /me still in flight
     await supabase.auth.signOut();
+    resetCacheFor(null);
     setProfile(null);
     setLoading(false);
   };

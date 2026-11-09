@@ -34,6 +34,7 @@ import { useTrips, useCreateTrip, useCancelTrip, useBulkCancelTrips, useRoutes, 
 import { useBulkSelection } from "@/hooks/use-bulk-selection";
 import { toast } from "sonner";
 import ListPageShell from "@/components/layout/ListPageShell";
+import { checkTripNumbers, isoFromManilaInput } from "@/lib/trip-form";
 
 function formatDeparture(iso: string) {
   return new Date(iso).toLocaleString("en-PH", {
@@ -80,6 +81,7 @@ export default function SchedulesPage() {
     bus_id?: string;
     driver_id?: string;
     scheduled_departure?: string;
+    arrival_time?: string;
     price?: string;
     available_seats?: string;
   }>({});
@@ -102,8 +104,14 @@ export default function SchedulesPage() {
     if (!form.bus_id) next.bus_id = "Select a bus.";
     if (!form.driver_id) next.driver_id = "Select a driver.";
     if (!form.scheduled_departure) next.scheduled_departure = "Set a departure date/time.";
-    if (form.price === "" || Number(form.price) < 0) next.price = "Enter a valid price.";
-    if (form.available_seats === "" || Number(form.available_seats) < 0) next.available_seats = "Enter a valid seat count.";
+    Object.assign(next, checkTripNumbers(form.price, form.available_seats, selectedBus?.capacity));
+    if (
+      form.scheduled_departure &&
+      form.arrival_time &&
+      isoFromManilaInput(form.arrival_time) <= isoFromManilaInput(form.scheduled_departure)
+    ) {
+      next.arrival_time = "Arrival must be after departure.";
+    }
     setErrors(next);
     return Object.keys(next).length === 0;
   };
@@ -131,10 +139,10 @@ export default function SchedulesPage() {
         route_id: form.route_id,
         bus_id: form.bus_id,
         driver_id: form.driver_id,
-        scheduled_departure: new Date(form.scheduled_departure).toISOString(),
+        scheduled_departure: isoFromManilaInput(form.scheduled_departure),
         price: Number(form.price),
         available_seats: Number(form.available_seats),
-        ...(form.arrival_time ? { arrival_time: new Date(form.arrival_time).toISOString() } : {}),
+        ...(form.arrival_time ? { arrival_time: isoFromManilaInput(form.arrival_time) } : {}),
       });
       toast.success("Trip scheduled");
       setDialogOpen(false);
@@ -517,7 +525,7 @@ export default function SchedulesPage() {
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="space-y-1">
-              <Label htmlFor="scheduled_departure">Departure</Label>
+              <Label htmlFor="scheduled_departure">Departure (Philippine time)</Label>
               <Input
                 id="scheduled_departure"
                 type="datetime-local"
@@ -527,13 +535,14 @@ export default function SchedulesPage() {
               {errors.scheduled_departure && <p className="text-xs text-red-600">{errors.scheduled_departure}</p>}
             </div>
             <div className="space-y-1">
-              <Label htmlFor="arrival_time">Arrival (optional)</Label>
+              <Label htmlFor="arrival_time">Arrival (optional, Philippine time)</Label>
               <Input
                 id="arrival_time"
                 type="datetime-local"
                 value={form.arrival_time}
                 onChange={(e) => setForm((f) => ({ ...f, arrival_time: e.target.value }))}
               />
+              {errors.arrival_time && <p className="text-xs text-red-600">{errors.arrival_time}</p>}
             </div>
           </div>
 
