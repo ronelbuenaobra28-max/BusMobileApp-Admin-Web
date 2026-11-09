@@ -12,8 +12,15 @@ export interface AdminProfile {
   last_name?: string;
 }
 
+/** Signed in with a password, but the session still needs the emailed
+ *  sign-in code before the API will accept it. */
+export interface PendingLoginCode {
+  emailHint: string | null;
+}
+
 interface AuthContextValue {
   profile: AdminProfile | null;
+  loginCode: PendingLoginCode | null;
   initialized: boolean;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
@@ -33,6 +40,7 @@ export function useAuth() {
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<AdminProfile | null>(null);
+  const [loginCode, setLoginCode] = useState<PendingLoginCode | null>(null);
   const [initialized, setInitialized] = useState(false);
   const [loading, setLoading] = useState(true);
   const queryClient = useQueryClient();
@@ -61,14 +69,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       resetCacheFor(session?.user.id ?? null);
       if (!session) {
         setProfile(null);
+        setLoginCode(null);
         return;
       }
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || ""}/api/auth/me`, {
-        headers: { Authorization: `Bearer ${session.access_token}` },
-      });
+      const base = import.meta.env.VITE_API_BASE_URL || "";
+      const headers = { Authorization: `Bearer ${session.access_token}` };
+      const response = await fetch(`${base}/api/auth/me`, { headers });
       if (!isLatest()) return;
+      if (response.status === 403) {
+        // Maybe only the emailed sign-in code is missing for this session.
+        const codeStatus = await fetch(`${base}/api/auth/login-code/status`, { headers })
+          .then((r) => (r.ok ? (r.json() as Promise<{ required: boolean; verified: boolean; email_hint?: string | null }>) : null))
+          .catch(() => null);
+        if (!isLatest()) return;
+        setProfile(null);
+        setLoginCode(
+          codeStatus?.required && !codeStatus.verified ? { emailHint: codeStatus.email_hint ?? null } : null,
+        );
+        return;
+      }
       if (!response.ok) {
         setProfile(null);
+        setLoginCode(null);
         return;
       }
       const data = (await response.json()) as {
@@ -79,6 +101,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         last_name?: string;
       };
       if (!isLatest()) return;
+      setLoginCode(null);
       setProfile({
         user_id: data.id,
         role: (data.role as UserRole) ?? "unknown",
@@ -130,11 +153,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await supabase.auth.signOut();
     resetCacheFor(null);
     setProfile(null);
+    setLoginCode(null);
     setLoading(false);
   };
 
   return (
-    <AuthContext.Provider value={{ profile, initialized, loading, login, logout, refreshProfile }}>
+    <AuthContext.Provider value={{ profile, loginCode, initialized, loading, login, logout, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   );

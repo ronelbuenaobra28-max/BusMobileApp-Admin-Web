@@ -329,6 +329,8 @@ export interface PartnerMe {
   first_name: string;
   last_name: string;
   email: string | null;
+  /** Still on the temporary password an admin sent. */
+  must_change_password?: boolean;
 }
 
 export interface PartnerUpcomingTrip {

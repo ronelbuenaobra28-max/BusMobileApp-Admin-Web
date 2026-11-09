@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { homePathFor } from "@/lib/roles";
+import { LoginCodeStep } from "@/components/auth/LoginCodeStep";
 
 const HIGHLIGHTS = [
   { icon: BarChart3, text: "Live reservations, revenue and fleet status" },
@@ -16,7 +17,7 @@ const HIGHLIGHTS = [
 ];
 
 export default function LoginPage() {
-  const { login, logout, profile, initialized, loading } = useAuth();
+  const { login, logout, profile, loginCode, initialized, loading } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -100,6 +101,10 @@ export default function LoginPage() {
             <img src="/seatpass-mark.png" alt="" className="h-10 w-10 rounded-xl" />
             <span className="text-lg font-semibold text-slate-900">SeatPass Admin</span>
           </div>
+          {loginCode ? (
+            <LoginCodeStep emailHint={loginCode.emailHint} />
+          ) : (
+          <>
           <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Welcome back</h1>
           <p className="mt-1.5 text-sm text-slate-600">Sign in with your SeatPass admin or bus company account.</p>
 
@@ -158,6 +163,8 @@ export default function LoginPage() {
               {submitting ? "Signing in..." : "Sign in"}
             </Button>
           </form>
+          </>
+          )}
         </div>
       </div>
     </div>
